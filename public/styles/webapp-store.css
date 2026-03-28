@@ -1,0 +1,224 @@
+:root {
+	--store-bg: #f4f1ea;
+	--store-surface: #ffffff;
+	--store-text: #1f2a2a;
+	--store-muted: #667070;
+	--store-stroke: rgba(31, 42, 42, 0.12);
+	--store-accent: #d66a4c;
+	--store-whatsapp: #25d366;
+	--store-booking: #b17cff;
+	--store-booking-hover: #9f68f1;
+	--store-price: #1f9f57;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	background: linear-gradient(180deg, rgba(244, 241, 234, 0.95) 0%, rgba(255, 255, 255, 1) 45%);
+	color: var(--store-text);
+	font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+.store-header {
+	background: rgba(255, 255, 255, 0.82);
+	backdrop-filter: blur(12px);
+	position: sticky;
+	top: 0;
+	z-index: 1000;
+	border-bottom: 1px solid var(--store-stroke);
+}
+
+.store-anchor-nav {
+	background: rgba(255, 255, 255, 0.66);
+	border-color: var(--store-stroke) !important;
+}
+
+.store-anchor-nav .btn-link {
+	padding: 0.25rem 0.75rem;
+	border-radius: 999px;
+	color: var(--store-text);
+	background: rgba(255, 255, 255, 0.6);
+	border: 1px solid var(--store-stroke);
+}
+
+.store-card {
+	background: var(--store-surface);
+	border: 1px solid var(--store-stroke);
+	border-radius: 1.1rem;
+	padding: 1rem;
+	box-shadow: 0 8px 24px rgba(31, 42, 42, 0.05);
+}
+
+.service-list {
+	display: grid;
+	gap: 0.85rem;
+}
+
+.service-card {
+	display: grid;
+	gap: 0.8rem;
+}
+
+.service-category {
+	font-size: 0.76rem;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--store-muted);
+	font-weight: 600;
+}
+
+.service-price {
+	font-size: 1.05rem;
+	color: var(--store-price);
+}
+
+.btn-whatsapp {
+	background: var(--store-whatsapp);
+	border-color: var(--store-whatsapp);
+	color: #fff;
+	font-weight: 600;
+}
+
+.btn-whatsapp:hover,
+.btn-whatsapp:focus,
+.btn-whatsapp:active {
+	background: #1fb85a !important;
+	border-color: #1fb85a !important;
+	color: #fff !important;
+}
+
+.btn-booking {
+	background: var(--store-booking);
+	border-color: var(--store-booking);
+	color: #fff;
+	border-radius: 0.72rem !important;
+	font-weight: 500;
+	line-height: 1.15;
+	padding: 0.34rem 0.72rem;
+}
+
+.btn-booking:hover,
+.btn-booking:focus,
+.btn-booking:active {
+	background: var(--store-booking-hover) !important;
+	border-color: var(--store-booking-hover) !important;
+	color: #fff !important;
+}
+
+.icon-only {
+	min-width: 2.35rem;
+	height: 2.1rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding-inline: 0.55rem;
+}
+
+.icon-only i {
+	font-size: 0.86rem;
+	line-height: 1;
+}
+
+.store-greeting {
+	color: var(--store-price);
+	font-weight: 600;
+	margin-top: 0.25rem;
+}
+
+#auth-modal .btn-link,
+#authModal .btn-link {
+	color: var(--store-accent);
+	text-decoration: none;
+	font-weight: 600;
+}
+
+#auth-modal .btn-link:hover,
+#authModal .btn-link:hover {
+	color: #b0563d;
+}
+
+.my-appointments-list {
+	display: grid;
+	gap: 0.55rem;
+}
+
+.my-appointment-item {
+	border: 1px solid var(--store-stroke);
+	border-radius: 0.75rem;
+	padding: 0.65rem 0.75rem;
+	background: rgba(255, 255, 255, 0.75);
+}
+
+.my-appointments-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 1.25rem 1rem;
+	border: 1px dashed var(--store-stroke);
+	border-radius: 0.75rem;
+	text-align: center;
+}
+
+.my-appointments-empty-icon {
+	font-size: 2rem;
+	color: var(--store-stroke);
+}
+
+.my-appointments-empty-title {
+	font-size: 0.9rem;
+	font-weight: 600;
+	margin-bottom: 0;
+	color: var(--store-text);
+}
+
+.my-appointments-empty-sub {
+	font-size: 0.8rem;
+	color: #888;
+	margin-bottom: 0.25rem;
+}
+
+.store-contact-list {
+	display: grid;
+	gap: 0.55rem;
+	font-size: 0.95rem;
+}
+
+.store-footer {
+	border-top: 1px solid var(--store-stroke);
+	background: rgba(255, 255, 255, 0.72);
+	color: var(--store-muted);
+}
+
+.footer-brand {
+	font-weight: 700;
+	color: var(--store-text);
+}
+
+.availability-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	min-height: 2.4rem;
+	padding: 0.15rem 0;
+}
+
+.availability-list .slot-button.active {
+	background: var(--store-accent);
+	color: #fff;
+	border-color: var(--store-accent);
+}
+
+@media (min-width: 768px) {
+	.store-card {
+		padding: 1.15rem 1.2rem;
+	}
+
+	.service-card {
+		grid-template-columns: 1fr auto;
+		align-items: center;
+	}
+}

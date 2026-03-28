@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title><%= title %> | Gendago</title>
+	<link rel="preconnect" href="https://cdn.jsdelivr.net">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+	<link rel="stylesheet" href="/styles/webapp-store.css">
+</head>
+<body>
+	<div class="store-shell" id="store-page"
+		data-slug="<%= slug %>"
+		data-professionals-endpoint-template="/app/api/__SLUG__/servicos/__SERVICE_ID__/profissionais"
+		data-availability-endpoint-template="/app/api/__SLUG__/profissionais/__PROFESSIONAL_ID__/disponibilidade"
+		data-booking-endpoint-template="/app/api/__SLUG__/agendamentos/confirmar"
+		data-auth-login-endpoint-template="/app/api/__SLUG__/auth/login"
+		data-auth-register-endpoint-template="/app/api/__SLUG__/auth/cadastro"
+		data-auth-me-endpoint-template="/app/api/__SLUG__/auth/me"
+		data-auth-logout-endpoint-template="/app/api/__SLUG__/auth/logout"
+		data-my-appointments-endpoint-template="/app/api/__SLUG__/agendamentos/meus">
+		<header class="store-header">
+			<div class="container py-3">
+				<div class="d-flex align-items-center justify-content-between gap-3">
+					<div>
+						<h1 class="h4 mb-1 fw-semibold"><%= company.nome %></h1>
+						<p class="small text-secondary mb-0"><%= company.telefone || 'Contato nao informado' %></p>
+						<p id="client-greeting" class="small store-greeting mb-0 <%= authenticatedClient ? '' : 'd-none' %>">Olá, <span id="client-greeting-name"><%= authenticatedClient ? authenticatedClient.nome : '' %></span></p>
+					</div>
+					<div class="d-flex gap-2">
+						<% if (company.telefone) { %>
+							<a class="btn btn-whatsapp btn-sm rounded-pill icon-only" href="https://wa.me/<%= String(company.telefone).replace(/\D/g, '') %>" target="_blank" rel="noopener noreferrer" aria-label="Abrir WhatsApp">
+								<i class="bi bi-whatsapp" aria-hidden="true"></i>
+							</a>
+						<% } %>
+						<button type="button" class="btn btn-dark btn-sm rounded-pill icon-only" id="share-store" aria-label="Compartilhar loja">
+							<i class="bi bi-share-fill" aria-hidden="true"></i>
+						</button>
+					</div>
+				</div>
+			</div>
+		</header>
+
+		<nav class="store-anchor-nav border-top border-bottom">
+			<div class="container py-2 d-flex flex-wrap gap-2">
+				<a href="#procedimentos" class="btn btn-sm btn-link text-decoration-none">Procedimentos</a>
+				<a href="#meus-agendamentos" class="btn btn-sm btn-link text-decoration-none">Meus Agendamentos</a>
+				<a href="#contato" class="btn btn-sm btn-link text-decoration-none">Contato</a>
+			</div>
+		</nav>
+
+		<main class="container py-4">
+			<section id="procedimentos" class="mb-4">
+				<div class="d-flex justify-content-between align-items-center mb-3">
+					<h2 class="h5 mb-0">Procedimentos</h2>
+					<span class="text-secondary small"><%= services.length %> disponiveis</span>
+				</div>
+
+				<% if (!services.length) { %>
+					<div class="store-card text-secondary">Nenhum procedimento encontrado para esta loja no momento.</div>
+				<% } %>
+
+				<div class="service-list">
+					<% services.forEach((service) => { %>
+						<article class="store-card service-card">
+							<div>
+								<p class="service-category mb-1"><%= service.categoriaNome || 'Procedimento' %></p>
+								<h3 class="h6 mb-1"><%= service.nome %></h3>
+								<p class="small text-secondary mb-0"><%= service.duracaoMinutos %> min</p>
+							</div>
+							<div class="d-flex flex-column align-items-start align-items-md-end gap-2">
+								<strong class="service-price"><%= service.precoFormatado %></strong>
+								<button
+									type="button"
+									class="btn btn-booking btn-sm rounded-pill book-service-button"
+									data-bs-toggle="modal"
+									data-bs-target="#bookingModal"
+									data-service-id="<%= service.id %>"
+									data-service-name="<%- service.nome %>">
+									Agendar
+								</button>
+							</div>
+						</article>
+					<% }) %>
+				</div>
+			</section>
+
+			<section id="meus-agendamentos" class="mb-4">
+				<div class="store-card">
+					<h2 class="h5 mb-2">Meus Agendamentos</h2>
+					<p class="text-secondary mb-3">Faca login para visualizar seus ultimos 5 agendamentos.</p>
+					<div class="d-flex gap-2 flex-wrap">
+						<button type="button" class="btn btn-outline-dark rounded-pill" id="open-login" data-bs-toggle="modal" data-bs-target="#authModal">Fazer Login</button>
+						<button type="button" class="btn btn-outline-danger rounded-pill <%= authenticatedClient ? '' : 'd-none' %>" id="logout-client">Sair</button>
+					</div>
+					<div id="my-appointments-list" class="my-appointments-list mt-3">
+						<p class="text-secondary small mb-0">Nenhum agendamento para exibir.</p>
+					</div>
+				</div>
+			</section>
+
+			<section id="contato" class="mb-5">
+				<div class="store-card">
+					<h2 class="h5 mb-3">Contato</h2>
+					<ul class="list-unstyled mb-0 store-contact-list">
+						<li><strong>Email:</strong> <%= company.email || 'Nao informado' %></li>
+						<li><strong>Telefone:</strong> <%= company.telefone || 'Nao informado' %></li>
+						<li><strong>Endereco:</strong> <%= company.endereco || 'Nao informado' %></li>
+					</ul>
+				</div>
+			</section>
+		</main>
+
+		<footer class="store-footer py-4">
+			<div class="container text-center">
+				<p class="mb-1 small">Sistema inteligente de agendamento &copy; 2026</p>
+				<p class="footer-brand mb-0">GendaGO</p>
+			</div>
+		</footer>
+	</div>
+
+	<div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="bookingModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content border-0 rounded-4">
+				<div class="modal-header border-0 pb-0">
+					<div>
+						<h2 class="modal-title h5 mb-1" id="bookingModalLabel">Agendar horario</h2>
+						<p class="text-secondary mb-0 small" id="booking-service-label">Escolha seu profissional e horario.</p>
+					</div>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+				</div>
+				<div class="modal-body pt-3">
+					<div id="booking-feedback" class="alert d-none rounded-4 border-0" role="alert"></div>
+					<form id="booking-form" class="row g-3">
+						<div class="col-12">
+							<label class="form-label fw-semibold" for="booking-professional">Profissional</label>
+							<select id="booking-professional" name="profissional_id" class="form-select" required>
+								<option value="">Selecione um profissional</option>
+							</select>
+						</div>
+						<div class="col-12 col-sm-6">
+							<label class="form-label fw-semibold" for="booking-date">Data</label>
+							<input id="booking-date" name="data" type="date" class="form-control" required>
+						</div>
+						<div class="col-12 col-sm-6 d-grid align-items-end">
+							<button type="button" class="btn btn-outline-dark rounded-pill" id="load-availability">Ver horarios</button>
+						</div>
+						<div class="col-12">
+							<label class="form-label fw-semibold">Horarios disponiveis</label>
+							<div id="availability-list" class="availability-list">
+								<p class="text-secondary small mb-0">Selecione profissional e data para consultar.</p>
+							</div>
+							<input type="hidden" name="hora" id="booking-time" required>
+						</div>
+						<div class="col-12 d-grid pt-2">
+							<button type="submit" class="btn btn-dark rounded-pill">Confirmar agendamento</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content border-0 rounded-4">
+				<div class="modal-header border-0 pb-0">
+					<div>
+						<h2 class="modal-title h5 mb-1" id="authModalLabel">Acessar conta</h2>
+						<p class="text-secondary mb-0 small"><%= company.nome %></p>
+					</div>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+				</div>
+				<div class="modal-body pt-3">
+					<div id="auth-feedback" class="alert d-none rounded-4 border-0" role="alert"></div>
+					<form id="auth-login-form" class="row g-3">
+						<div class="col-12">
+							<label class="form-label fw-semibold" for="auth-identifier">Email ou telefone</label>
+							<input id="auth-identifier" name="identificador" type="text" class="form-control" placeholder="Informe seu email ou telefone com o ddd" required>
+						</div>
+						<div class="col-12">
+							<label class="form-label fw-semibold" for="auth-password">Senha</label>
+							<input id="auth-password" name="senha" type="password" class="form-control" placeholder="Informe sua senha" required>
+						</div>
+						<div class="col-12 d-grid">
+							<button type="submit" class="btn btn-dark rounded-pill">Entrar</button>
+						</div>
+						<div class="col-12 text-center">
+							<button type="button" class="btn btn-link p-0" id="show-register-form">Nao tenho cadastro</button>
+						</div>
+					</form>
+
+					<form id="auth-register-form" class="row g-3 d-none">
+						<div class="col-12">
+							<label class="form-label fw-semibold" for="register-name">Nome completo</label>
+							<input id="register-name" name="nome_completo" type="text" class="form-control" placeholder="Informe seu nome completo" required>
+						</div>
+						<div class="col-12">
+							<label class="form-label fw-semibold" for="register-email">Email</label>
+							<input id="register-email" name="email" type="email" class="form-control" placeholder="voce@email.com" required>
+						</div>
+						<div class="col-12">
+							<label class="form-label fw-semibold" for="register-phone">Telefone com DDD</label>
+							<input id="register-phone" name="telefone" type="text" class="form-control" placeholder="11 99999-9999" required>
+						</div>
+						<div class="col-12">
+							<label class="form-label fw-semibold" for="register-password">Senha</label>
+							<input id="register-password" name="senha" type="password" class="form-control" placeholder="Minimo 6 caracteres" required>
+						</div>
+						<div class="col-12 d-grid">
+							<button type="submit" class="btn btn-dark rounded-pill">Criar conta</button>
+						</div>
+						<div class="col-12 text-center">
+							<button type="button" class="btn btn-link p-0" id="show-login-form">Ja tenho cadastro</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
+	<script>
+		(function () {
+			const page = document.getElementById('store-page');
+			if (!page) {
+				return;
+			}
+
+			const slug = page.dataset.slug || '';
+			const bookingForm = document.getElementById('booking-form');
+			const bookingFeedback = document.getElementById('booking-feedback');
+			const bookingServiceLabel = document.getElementById('booking-service-label');
+			const professionalSelect = document.getElementById('booking-professional');
+			const bookingDate = document.getElementById('booking-date');
+			const bookingTime = document.getElementById('booking-time');
+			const availabilityList = document.getElementById('availability-list');
+			const loadAvailabilityButton = document.getElementById('load-availability');
+			const authLoginForm = document.getElementById('auth-login-form');
+			const authRegisterForm = document.getElementById('auth-register-form');
+			const authFeedback = document.getElementById('auth-feedback');
+			const showRegisterButton = document.getElementById('show-register-form');
+			const showLoginButton = document.getElementById('show-login-form');
+			const openLoginButton = document.getElementById('open-login');
+			const logoutButton = document.getElementById('logout-client');
+			const greeting = document.getElementById('client-greeting');
+			const greetingName = document.getElementById('client-greeting-name');
+			const myAppointmentsList = document.getElementById('my-appointments-list');
+			const authModalElement = document.getElementById('authModal');
+			const authModal = authModalElement ? new bootstrap.Modal(authModalElement) : null;
+
+			let selectedServiceId = '';
+			let authenticatedClient = greetingName?.textContent?.trim() ? { nome: greetingName.textContent.trim() } : null;
+
+			function setFeedback(type, text) {
+				if (!text) {
+					bookingFeedback.className = 'alert d-none rounded-4 border-0';
+					bookingFeedback.textContent = '';
+					return;
+				}
+
+				bookingFeedback.className = `alert alert-${type} rounded-4 border-0`;
+				bookingFeedback.textContent = text;
+			}
+
+			function setAuthFeedback(type, text) {
+				if (!text) {
+					authFeedback.className = 'alert d-none rounded-4 border-0';
+					authFeedback.textContent = '';
+					return;
+				}
+
+				authFeedback.className = `alert alert-${type} rounded-4 border-0`;
+				authFeedback.textContent = text;
+			}
+
+			function parseResponse(response) {
+				return response.text().then((text) => {
+					try {
+						return text ? JSON.parse(text) : {};
+					} catch (error) {
+						return { message: text || 'Resposta invalida da API.' };
+					}
+				});
+			}
+
+			function templateUrl(template, values) {
+				let url = template;
+				Object.entries(values).forEach(([key, value]) => {
+					url = url.replace(`__${key}__`, encodeURIComponent(value));
+				});
+				return url;
+			}
+
+			function getEndpoint(templateKey) {
+				return templateUrl(page.dataset[templateKey], { SLUG: slug });
+			}
+
+			function openAuthModal() {
+				if (authModal) {
+					authModal.show();
+				}
+			}
+
+			function closeAuthModal() {
+				if (authModal) {
+					authModal.hide();
+				}
+			}
+
+			function showLoginForm() {
+				authRegisterForm.classList.add('d-none');
+				authLoginForm.classList.remove('d-none');
+				setAuthFeedback(null, '');
+			}
+
+			function showRegisterForm() {
+				authLoginForm.classList.add('d-none');
+				authRegisterForm.classList.remove('d-none');
+				setAuthFeedback(null, '');
+			}
+
+			function setAuthenticatedClient(client) {
+				authenticatedClient = client || null;
+				const hasClient = Boolean(authenticatedClient && authenticatedClient.nome);
+				if (hasClient) {
+					greetingName.textContent = authenticatedClient.nome;
+					greeting.classList.remove('d-none');
+					logoutButton.classList.remove('d-none');
+					openLoginButton.classList.add('d-none');
+					loadMyAppointments();
+					return;
+				}
+
+				greeting.classList.add('d-none');
+				greetingName.textContent = '';
+				logoutButton.classList.add('d-none');
+				openLoginButton.classList.remove('d-none');
+				renderMyAppointments([]);
+			}
+
+			function formatCurrency(value) {
+				return new Intl.NumberFormat('pt-BR', {
+					style: 'currency',
+					currency: 'BRL',
+				}).format(Number(value || 0));
+			}
+
+			function formatDate(value) {
+				const date = new Date(value);
+				if (Number.isNaN(date.getTime())) {
+					return '-';
+				}
+
+				return date.toLocaleString('pt-BR', {
+					day: '2-digit',
+					month: '2-digit',
+					year: 'numeric',
+					hour: '2-digit',
+					minute: '2-digit',
+				});
+			}
+
+			function renderMyAppointments(appointments) {
+				if (!authenticatedClient) {
+					myAppointmentsList.innerHTML = '<p class="text-secondary small mb-0">Faca login para visualizar seus agendamentos.</p>';
+					return;
+				}
+
+				if (!appointments.length) {
+					myAppointmentsList.innerHTML = `
+						<div class="my-appointments-empty">
+							<i class="bi bi-calendar-x my-appointments-empty-icon"></i>
+							<p class="my-appointments-empty-title">Nenhum agendamento ainda</p>
+							<p class="my-appointments-empty-sub">Que tal marcar um horário agora?</p>
+							<button type="button" class="btn btn-store btn-sm" onclick="document.getElementById('procedimentos').scrollIntoView({ behavior: 'smooth' })">
+								Agendar agora
+							</button>
+						</div>
+					`;
+					return;
+				}
+
+				myAppointmentsList.innerHTML = appointments.map((item) => {
+					const status = String(item.status || '').trim() || 'agendado';
+					return `
+						<article class="my-appointment-item">
+							<div class="d-flex justify-content-between align-items-start gap-2">
+								<div>
+									<p class="small fw-semibold mb-1">${item.servico || 'Servico'}</p>
+									<p class="small text-secondary mb-1">${formatDate(item.data_agendamento)}</p>
+									<p class="small text-secondary mb-0">${item.profissional ? `Profissional: ${item.profissional}` : ''}</p>
+								</div>
+								<div class="text-end">
+									<span class="badge text-bg-light border">${status}</span>
+									<p class="small fw-semibold mt-2 mb-0">${formatCurrency(item.valor)}</p>
+								</div>
+							</div>
+						</article>
+					`;
+				}).join('');
+			}
+
+			async function loadMyAppointments() {
+				if (!authenticatedClient) {
+					renderMyAppointments([]);
+					return;
+				}
+
+				try {
+					const response = await fetch(getEndpoint('myAppointmentsEndpointTemplate'), {
+						headers: { Accept: 'application/json' },
+					});
+					const payload = await parseResponse(response);
+					if (!response.ok) {
+						if (response.status === 401) {
+							setAuthenticatedClient(null);
+							return;
+						}
+						throw new Error(payload.message || 'Nao foi possivel carregar seus agendamentos.');
+					}
+
+					const appointments = Array.isArray(payload.agendamentos) ? payload.agendamentos : [];
+					renderMyAppointments(appointments);
+				} catch (error) {
+					myAppointmentsList.innerHTML = '<p class="text-secondary small mb-0">Nao foi possivel carregar seus agendamentos.</p>';
+				}
+			}
+
+			function renderSlots(slots) {
+				bookingTime.value = '';
+
+				if (!slots.length) {
+					availabilityList.innerHTML = '<p class="text-secondary small mb-0">Nenhum horario disponivel nesta data.</p>';
+					return;
+				}
+
+				availabilityList.innerHTML = slots.map((slot) => (
+					`<button type="button" class="btn btn-outline-dark btn-sm rounded-pill slot-button" data-slot="${slot}">${slot}</button>`
+				)).join('');
+
+				availabilityList.querySelectorAll('.slot-button').forEach((button) => {
+					button.addEventListener('click', () => {
+						availabilityList.querySelectorAll('.slot-button').forEach((item) => item.classList.remove('active'));
+						button.classList.add('active');
+						bookingTime.value = button.dataset.slot;
+					});
+				});
+			}
+
+			async function refreshClientSession() {
+				const endpoint = getEndpoint('authMeEndpointTemplate');
+				try {
+					const response = await fetch(endpoint, { headers: { Accept: 'application/json' } });
+					if (!response.ok) {
+						setAuthenticatedClient(null);
+						return;
+					}
+
+					const payload = await parseResponse(response);
+					setAuthenticatedClient(payload.cliente || null);
+				} catch (error) {
+					setAuthenticatedClient(null);
+				}
+			}
+
+			document.getElementById('share-store')?.addEventListener('click', async () => {
+				try {
+					if (navigator.share) {
+						await navigator.share({
+							title: document.title,
+							url: window.location.href,
+						});
+						return;
+					}
+
+					await navigator.clipboard.writeText(window.location.href);
+					setFeedback('success', 'Link copiado com sucesso.');
+				} catch (error) {
+					setFeedback('warning', 'Nao foi possivel compartilhar agora.');
+				}
+			});
+
+			showRegisterButton?.addEventListener('click', showRegisterForm);
+			showLoginButton?.addEventListener('click', showLoginForm);
+
+			authLoginForm?.addEventListener('submit', async (event) => {
+				event.preventDefault();
+				setAuthFeedback(null, '');
+
+				const identifier = String(document.getElementById('auth-identifier').value || '').trim();
+				const password = String(document.getElementById('auth-password').value || '').trim();
+
+				if (!identifier || !password) {
+					setAuthFeedback('warning', 'Informe seu email ou telefone com o ddd e a senha.');
+					return;
+				}
+
+				try {
+					const response = await fetch(getEndpoint('authLoginEndpointTemplate'), {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							Accept: 'application/json',
+						},
+						body: JSON.stringify({
+							email_ou_telefone: identifier,
+							senha: password,
+						}),
+					});
+
+					const result = await parseResponse(response);
+					if (!response.ok) {
+						throw new Error(result.message || 'Nao foi possivel realizar login.');
+					}
+
+					setAuthenticatedClient(result.cliente || null);
+					closeAuthModal();
+					setFeedback('success', 'Login realizado com sucesso.');
+				} catch (error) {
+					setAuthFeedback('danger', error.message || 'Nao foi possivel realizar login.');
+				}
+			});
+
+			authRegisterForm?.addEventListener('submit', async (event) => {
+				event.preventDefault();
+				setAuthFeedback(null, '');
+
+				const payload = {
+					nome_completo: String(document.getElementById('register-name').value || '').trim(),
+					email: String(document.getElementById('register-email').value || '').trim(),
+					telefone: String(document.getElementById('register-phone').value || '').trim(),
+					senha: String(document.getElementById('register-password').value || '').trim(),
+				};
+
+				if (!payload.nome_completo || !payload.email || !payload.telefone || !payload.senha) {
+					setAuthFeedback('warning', 'Preencha todos os campos para criar sua conta.');
+					return;
+				}
+
+				try {
+					const response = await fetch(getEndpoint('authRegisterEndpointTemplate'), {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							Accept: 'application/json',
+						},
+						body: JSON.stringify(payload),
+					});
+
+					const result = await parseResponse(response);
+					if (!response.ok) {
+						throw new Error(result.message || 'Nao foi possivel concluir cadastro.');
+					}
+
+					setAuthenticatedClient(result.cliente || null);
+					closeAuthModal();
+					setFeedback('success', 'Conta criada e login realizado com sucesso.');
+				} catch (error) {
+					setAuthFeedback('danger', error.message || 'Nao foi possivel concluir cadastro.');
+				}
+			});
+
+			logoutButton?.addEventListener('click', async () => {
+				try {
+					await fetch(getEndpoint('authLogoutEndpointTemplate'), {
+						method: 'POST',
+						headers: { Accept: 'application/json' },
+					});
+				} catch (error) {
+				}
+
+				setAuthenticatedClient(null);
+				setFeedback('warning', 'Voce saiu da sua conta.');
+			});
+
+			document.querySelectorAll('.book-service-button').forEach((button) => {
+				button.addEventListener('click', async () => {
+					selectedServiceId = button.dataset.serviceId;
+					bookingServiceLabel.textContent = `${button.dataset.serviceName} · Escolha seu profissional e horario.`;
+					setFeedback(null, '');
+					bookingForm.reset();
+					availabilityList.innerHTML = '<p class="text-secondary small mb-0">Selecione profissional e data para consultar.</p>';
+
+					const endpoint = templateUrl(page.dataset.professionalsEndpointTemplate, {
+						SLUG: slug,
+						SERVICE_ID: selectedServiceId,
+					});
+
+					try {
+						const response = await fetch(endpoint, { headers: { Accept: 'application/json' } });
+						const result = await parseResponse(response);
+
+						if (!response.ok) {
+							throw new Error(result.message || 'Nao foi possivel carregar os profissionais.');
+						}
+
+						const professionals = Array.isArray(result.professionals) ? result.professionals : [];
+						professionalSelect.innerHTML = '<option value="">Selecione um profissional</option>'
+							+ professionals.map((professional) => (
+								`<option value="${professional.id}">${professional.nome}</option>`
+							)).join('');
+					} catch (error) {
+						professionalSelect.innerHTML = '<option value="">Nenhum profissional disponivel</option>';
+						setFeedback('danger', error.message);
+					}
+				});
+			});
+
+			loadAvailabilityButton?.addEventListener('click', async () => {
+				setFeedback(null, '');
+				const professionalId = professionalSelect.value;
+				const date = bookingDate.value;
+
+				if (!selectedServiceId || !professionalId || !date) {
+					setFeedback('warning', 'Selecione profissional e data para consultar horarios.');
+					return;
+				}
+
+				const endpointBase = templateUrl(page.dataset.availabilityEndpointTemplate, {
+					SLUG: slug,
+					PROFESSIONAL_ID: professionalId,
+				});
+
+				try {
+					const response = await fetch(`${endpointBase}?data=${encodeURIComponent(date)}`, {
+						headers: { Accept: 'application/json' },
+					});
+					const result = await parseResponse(response);
+
+					if (!response.ok) {
+						throw new Error(result.message || 'Nao foi possivel carregar os horarios.');
+					}
+
+					renderSlots(Array.isArray(result.slots) ? result.slots : []);
+				} catch (error) {
+					availabilityList.innerHTML = '<p class="text-secondary small mb-0">Falha ao carregar horarios.</p>';
+					setFeedback('danger', error.message);
+				}
+			});
+
+			bookingForm?.addEventListener('submit', async (event) => {
+				event.preventDefault();
+				setFeedback(null, '');
+
+				const payload = {
+					servico_id: selectedServiceId,
+					profissional_id: professionalSelect.value,
+					data: bookingDate.value,
+					hora: bookingTime.value,
+				};
+
+				if (!payload.servico_id || !payload.profissional_id || !payload.data || !payload.hora) {
+					setFeedback('warning', 'Preencha todos os campos do agendamento.');
+					return;
+				}
+
+				if (!authenticatedClient) {
+					setFeedback('warning', 'Faca login para confirmar seu agendamento.');
+					openAuthModal();
+					showLoginForm();
+					return;
+				}
+
+				const endpoint = templateUrl(page.dataset.bookingEndpointTemplate, {
+					SLUG: slug,
+				});
+
+				try {
+					const response = await fetch(endpoint, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							Accept: 'application/json',
+						},
+						body: JSON.stringify(payload),
+					});
+					const result = await parseResponse(response);
+
+					if (!response.ok) {
+						if (response.status === 401) {
+							setAuthenticatedClient(null);
+							openAuthModal();
+							showLoginForm();
+						}
+						throw new Error(result.message || 'Nao foi possivel confirmar o agendamento.');
+					}
+
+					setFeedback('success', result.message || 'Agendamento confirmado com sucesso.');
+					loadMyAppointments();
+				} catch (error) {
+					setFeedback('danger', error.message);
+				}
+			});
+
+			refreshClientSession();
+			renderMyAppointments([]);
+		})();
+	</script>
+</body>
+</html>

@@ -1,15 +1,4 @@
-const axios = require('axios');
-
-const venusApiBaseUrl = process.env.VENUS_API_URL || 'http://127.0.0.1:8000';
-
-const venusAuthClient = axios.create({
-	baseURL: venusApiBaseUrl,
-	timeout: 10000,
-	headers: {
-		Accept: 'application/json',
-		'Content-Type': 'application/json',
-	},
-});
+const usuariosLocalService = require('../backend/domains/usuarios/service');
 
 function normalizeEmail(email) {
 	return String(email || '').trim().toLowerCase();
@@ -33,12 +22,10 @@ function normalizeCompany(payload) {
 
 async function authenticate(email, password) {
 	try {
-		const response = await venusAuthClient.post('/usuarios/login', {
+		const payload = await usuariosLocalService.login({
 			email: normalizeEmail(email),
 			senha: password,
 		});
-
-		const payload = response.data || {};
 
 		return {
 			email: normalizeEmail(payload.email || email),
@@ -49,11 +36,7 @@ async function authenticate(email, password) {
 			raw: payload,
 		};
 	} catch (error) {
-		if (error.response && error.response.status === 401) {
-			return null;
-		}
-
-		if (error.response && error.response.status === 422) {
+		if (error.statusCode === 401 || error.statusCode === 422 || error.statusCode === 400) {
 			return null;
 		}
 

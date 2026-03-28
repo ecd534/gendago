@@ -2,6 +2,9 @@ const express = require('express')
 const session = require('express-session');
 const adminRoute = require('./route/admin');
 const categoriaRoute = require('./route/categoria');
+const webappRoute = require('./route/webapp');
+const apiRoute = require('./route/api');
+const swaggerRoute = require('./route/swagger');
 const path = require('path');
 
 const app = express()
@@ -39,6 +42,9 @@ app.get('/', (req, res) => {
 
 app.use(adminRoute);
 app.use(categoriaRoute);
+app.use(webappRoute);
+app.use(apiRoute);
+app.use(swaggerRoute);
 
 if (require.main === module) {
 	app.listen(port, () => {

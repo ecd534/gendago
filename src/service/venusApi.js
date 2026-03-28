@@ -1,45 +1,51 @@
-const axios = require('axios');
+const { query } = require('../backend/db/pool');
 
-const venusApi = axios.create({
-    baseURL: process.env.VENUS_API_URL || 'http://127.0.0.1:8000',
-    timeout: 10000,
-    headers: {
-        Accept: 'application/json',
-    },
-});
+function createError(message, statusCode = 500) {
+	const error = new Error(message);
+	error.statusCode = statusCode;
+	return error;
+}
 
-function getAuthHeaders() {
-    const token = process.env.VENUS_API_TOKEN;
-
-    if (!token) {
-        return {};
-    }
-
-    const headerName = process.env.VENUS_API_AUTH_HEADER || 'Authorization';
-    const tokenPrefix = process.env.VENUS_API_TOKEN_PREFIX || 'Bearer';
-
-    return {
-        [headerName]: tokenPrefix ? `${tokenPrefix} ${token}` : token,
-    };
+function normalizeCategoria(row = {}) {
+	return {
+		id: String(row.id || '').trim(),
+		nome: String(row.nome || '').trim(),
+	};
 }
 
 async function getCategorias() {
-    const endpoint = process.env.VENUS_CATEGORIAS_PATH || '/categorias';
-    const response = await venusApi.get(endpoint, {
-        headers: getAuthHeaders(),
-    });
-    return response.data;
+	const result = await query(`
+		SELECT id, nome
+		FROM venus.categorias
+		ORDER BY nome ASC
+	`);
+
+	return result.rows
+		.map(normalizeCategoria)
+		.filter((categoria) => categoria.id && categoria.nome);
 }
 
 async function getCategoriaById(id) {
-    const endpoint = process.env.VENUS_CATEGORIA_BY_ID_PATH || '/categorias';
-    const response = await venusApi.get(`${endpoint}/${id}`, {
-        headers: getAuthHeaders(),
-    });
-    return response.data;
+	const categoriaId = String(id || '').trim();
+	if (!categoriaId) {
+		throw createError('Categoria nao informada.', 422);
+	}
+
+	const result = await query(`
+		SELECT id, nome
+		FROM venus.categorias
+		WHERE id = $1
+		LIMIT 1
+	`, [categoriaId]);
+
+	if (!result.rows[0]) {
+		throw createError('Categoria nao encontrada.', 404);
+	}
+
+	return normalizeCategoria(result.rows[0]);
 }
 
 module.exports = {
-    getCategorias,
-    getCategoriaById,
+	getCategorias,
+	getCategoriaById,
 };

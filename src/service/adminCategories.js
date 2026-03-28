@@ -1,18 +1,5 @@
-const axios = require('axios');
-
-const venusApiBaseUrl = process.env.VENUS_API_URL || 'http://127.0.0.1:8000';
-
-function createClient(token) {
-	return axios.create({
-		baseURL: venusApiBaseUrl,
-		timeout: 10000,
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`,
-		},
-	});
-}
+const localCatalogService = require('../backend/domains/catalogo/service');
+const { verifyAccessToken } = require('../backend/security/jwt');
 
 function normalizeCategory(category) {
 	return {
@@ -42,47 +29,49 @@ async function listCategoriesByCompany(token, companyId, onlyActive = true) {
 		return [];
 	}
 
-	const client = createClient(token);
-	const response = await client.get(`/categorias/${companyId}`, {
-		params: {
-			apenas_ativas: onlyActive,
-		},
-	});
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
 
-	return Array.isArray(response.data) ? response.data.map(normalizeCategory) : [];
+	const categories = await localCatalogService.listCategoriesByCompany(viewer, companyId, onlyActive);
+	return Array.isArray(categories) ? categories.map(normalizeCategory) : [];
 }
 
 async function createCategory(token, form) {
-	const client = createClient(token);
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
 
 	try {
-		const response = await client.post('/categorias/', {
-			nome: String(form.nome || '').trim(),
-			empresa_id: String(form.empresa_id || '').trim(),
-			ativo: typeof form.ativo === 'boolean' ? form.ativo : true,
-		});
-		return normalizeCategory(response.data || form);
+		const created = await localCatalogService.createCategory(viewer, form);
+		return normalizeCategory(created || form);
 	} catch (error) {
-		const customError = new Error(extractApiError(error));
-		customError.statusCode = error.response?.status || 500;
+		const customError = new Error(error.message || extractApiError(error));
+		customError.statusCode = error.statusCode || 500;
 		throw customError;
 	}
 }
 
 async function updateCategory(token, categoryId, form) {
-	const client = createClient(token);
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
 
 	try {
-		const response = await client.patch(`/categorias/${categoryId}`, null, {
-			params: {
-				nome: String(form.nome || '').trim(),
-				ativo: Boolean(form.ativo),
-			},
-		});
-		return normalizeCategory(response.data || { id: categoryId, ...form });
+		const updated = await localCatalogService.updateCategory(viewer, categoryId, form);
+		return normalizeCategory(updated || { id: categoryId, ...form });
 	} catch (error) {
-		const customError = new Error(extractApiError(error));
-		customError.statusCode = error.response?.status || 500;
+		const customError = new Error(error.message || extractApiError(error));
+		customError.statusCode = error.statusCode || 500;
 		throw customError;
 	}
 }

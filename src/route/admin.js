@@ -1,6 +1,7 @@
 const express = require('express');
 
 const adminAuth = require('../service/adminAuth');
+const adminAgendamentos = require('../service/adminAgendamentos');
 const adminCategories = require('../service/adminCategories');
 const adminClientes = require('../service/adminClientes');
 const adminCompanies = require('../service/adminCompanies');
@@ -136,6 +137,22 @@ async function resolveProfessionalContext(req, preferredCompanyId) {
 		activeCompanies,
 		companyId,
 		professionals,
+	};
+}
+
+async function resolveAppointmentContext(req, preferredCompanyId, date) {
+	const role = req.session.adminUser.role;
+	const token = req.session.adminUser.token;
+	const activeCompanies = role === 'master' ? await adminCompanies.listActiveCompanies(token) : [];
+	const companyId = role === 'master'
+		? String(preferredCompanyId || '').trim() || (activeCompanies[0] ? activeCompanies[0].id : '')
+		: currentAdminCompanyId(req);
+	const appointments = companyId ? await adminAgendamentos.listByDate(token, companyId, date) : [];
+
+	return {
+		activeCompanies,
+		companyId,
+		appointments,
 	};
 }
 
@@ -845,7 +862,7 @@ router.post('/admin/api/profissionais/:id/bloqueios', ensureRoles(['master', 'ad
 	}
 });
 
-router.get('/admin/clientes', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para acessar o cadastro de clientes.'), async (req, res) => {
+router.get('/admin/clientes', ensureRoles(['master', 'admin', 'agente'], 'Voce nao tem permissao para acessar o cadastro de clientes.'), async (req, res) => {
 	try {
 		const clientContext = await resolveClientContext(req, req.query.empresa_id);
 		const companiesById = new Map(clientContext.activeCompanies.map((company) => [company.id, company]));
@@ -869,7 +886,7 @@ router.get('/admin/clientes', ensureRoles(['master', 'admin'], 'Voce nao tem per
 	}
 });
 
-router.get('/admin/api/clientes', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para consultar clientes.'), async (req, res) => {
+router.get('/admin/api/clientes', ensureRoles(['master', 'admin', 'agente'], 'Voce nao tem permissao para consultar clientes.'), async (req, res) => {
 	const preferredCompanyId = req.session.adminUser.role === 'master'
 		? String(req.query.empresa_id || '').trim()
 		: currentAdminCompanyId(req);
@@ -906,7 +923,7 @@ router.post('/admin/api/clientes', ensureRoles(['master', 'admin'], 'Voce nao te
 	}
 });
 
-router.get('/admin/api/clientes/:id', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para consultar cliente.'), async (req, res) => {
+router.get('/admin/api/clientes/:id', ensureRoles(['master', 'admin', 'agente'], 'Voce nao tem permissao para consultar cliente.'), async (req, res) => {
 	const effectiveCompanyId = req.session.adminUser.role === 'master'
 		? String(req.query.empresa_id || '').trim()
 		: currentAdminCompanyId(req);
@@ -924,7 +941,7 @@ router.get('/admin/api/clientes/:id', ensureRoles(['master', 'admin'], 'Voce nao
 	}
 });
 
-router.patch('/admin/api/clientes/:id', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para atualizar cliente.'), async (req, res) => {
+router.patch('/admin/api/clientes/:id', ensureRoles(['master', 'admin', 'agente'], 'Voce nao tem permissao para atualizar cliente.'), async (req, res) => {
 	const effectiveCompanyId = req.session.adminUser.role === 'master'
 		? String(req.body.empresa_id || '').trim()
 		: currentAdminCompanyId(req);
@@ -1058,6 +1075,64 @@ router.post('/admin/empresas/:id/status', ensureRoles(['master'], 'Voce nao tem 
 			formError: error.message,
 			companyForm,
 		});
+	}
+});
+
+router.get('/admin/agendamentos', ensureAuthenticated, async (req, res) => {
+	const today = new Date().toISOString().slice(0, 10);
+	const date = String(req.query.data || today).slice(0, 10) || today;
+	const preferredCompanyId = String(req.query.empresa_id || '').trim();
+
+	try {
+		const context = await resolveAppointmentContext(req, preferredCompanyId, date);
+		const companiesById = new Map(context.activeCompanies.map((c) => [c.id, c]));
+
+		return res.render('backoffice/agendamentos/index', {
+			title: 'Gerenciar Agendamentos',
+			page: 'agendamentos',
+			currentAdmin: req.session.adminUser,
+			appointments: context.appointments,
+			activeCompanies: context.activeCompanies,
+			selectedCompanyId: context.companyId,
+			selectedCompanyName: companiesById.get(context.companyId)?.nome || context.companyId,
+			selectedDate: date,
+			isMaster: req.session.adminUser.role === 'master',
+		});
+	} catch (error) {
+		req.session.flashMessage = {
+			type: 'danger',
+			text: 'Nao foi possivel carregar os agendamentos.',
+		};
+		return res.redirect('/admin');
+	}
+});
+
+router.get('/admin/api/agendamentos', ensureAuthenticated, async (req, res) => {
+	const today = new Date().toISOString().slice(0, 10);
+	const date = String(req.query.data || today).slice(0, 10) || today;
+	const preferredCompanyId = req.session.adminUser.role === 'master'
+		? String(req.query.empresa_id || '').trim()
+		: currentAdminCompanyId(req);
+
+	try {
+		const context = await resolveAppointmentContext(req, preferredCompanyId, date);
+		return res.json({ appointments: context.appointments, companyId: context.companyId });
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message });
+	}
+});
+
+router.patch('/admin/api/agendamentos/:id/status', ensureAuthenticated, async (req, res) => {
+	const newStatus = String(req.body.novo_status || req.query.novo_status || '').trim();
+	if (!newStatus) {
+		return res.status(422).json({ message: 'novo_status e obrigatorio.' });
+	}
+
+	try {
+		const result = await adminAgendamentos.updateStatus(req.session.adminUser.token, req.params.id, newStatus);
+		return res.json(result);
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message });
 	}
 });
 

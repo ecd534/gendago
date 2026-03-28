@@ -1,18 +1,5 @@
-const axios = require('axios');
-
-const venusApiBaseUrl = process.env.VENUS_API_URL || 'http://127.0.0.1:8000';
-
-function createClient(token) {
-	return axios.create({
-		baseURL: venusApiBaseUrl,
-		timeout: 10000,
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`,
-		},
-	});
-}
+const localCatalogService = require('../backend/domains/catalogo/service');
+const { verifyAccessToken } = require('../backend/security/jwt');
 
 function normalizeService(service) {
 	return {
@@ -54,26 +41,42 @@ async function listServicesByCompany(token, companyId) {
 		return [];
 	}
 
-	const client = createClient(token);
-	const response = await client.get(`/servicos/empresa/${companyId}`);
-	return Array.isArray(response.data) ? response.data.map(normalizeService) : [];
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
+
+	const services = await localCatalogService.listServicesByCompany(viewer, companyId);
+	return Array.isArray(services) ? services.map(normalizeService) : [];
 }
 
 async function getServiceById(token, serviceId) {
-	const client = createClient(token);
-	const response = await client.get(`/servicos/detalhe/${serviceId}`);
-	return normalizeService(response.data || {});
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
+
+	return normalizeService(await localCatalogService.getServiceById(viewer, serviceId));
 }
 
 async function createService(token, form) {
-	const client = createClient(token);
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
 
 	try {
-		const response = await client.post('/servicos/', buildPayload(form));
-		return normalizeService(response.data || form);
+		const created = await localCatalogService.createService(viewer, buildPayload(form));
+		return normalizeService(created || form);
 	} catch (error) {
-		const customError = new Error(extractApiError(error));
-		customError.statusCode = error.response?.status || 500;
+		const customError = new Error(error.message || extractApiError(error));
+		customError.statusCode = error.statusCode || 500;
 		throw customError;
 	}
 }

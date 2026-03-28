@@ -1,18 +1,5 @@
-const axios = require('axios');
-
-const venusApiBaseUrl = process.env.VENUS_API_URL || 'http://127.0.0.1:8000';
-
-function createClient(token) {
-	return axios.create({
-		baseURL: venusApiBaseUrl,
-		timeout: 10000,
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`,
-		},
-	});
-}
+const localProfessionalsService = require('../backend/domains/profissionais/service');
+const { verifyAccessToken } = require('../backend/security/jwt');
 
 function extractApiError(error) {
 	if (error.response?.data?.detail) {
@@ -63,25 +50,31 @@ async function listProfessionalsByCompany(token, companyId) {
 		return [];
 	}
 
-	const client = createClient(token);
-	const response = await client.get(`/profissionais/${companyId}`);
-	return Array.isArray(response.data) ? response.data.map(normalizeProfessional) : [];
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
+
+	const professionals = await localProfessionalsService.listProfessionalsByCompany(viewer, companyId);
+	return Array.isArray(professionals) ? professionals.map(normalizeProfessional) : [];
 }
 
 async function createProfessional(token, form) {
-	const client = createClient(token);
-	const payload = {
-		nome: String(form.nome || '').trim(),
-		ativo: typeof form.ativo === 'boolean' ? form.ativo : true,
-		empresa_id: String(form.empresa_id || '').trim(),
-	};
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
 
 	try {
-		const response = await client.post('/profissionais/', payload);
-		return normalizeProfessional(response.data || payload);
+		const created = await localProfessionalsService.createProfessional(viewer, form);
+		return normalizeProfessional(created || form);
 	} catch (error) {
-		const customError = new Error(extractApiError(error));
-		customError.statusCode = error.response?.status || 500;
+		const customError = new Error(error.message || extractApiError(error));
+		customError.statusCode = error.statusCode || 500;
 		throw customError;
 	}
 }
@@ -91,26 +84,30 @@ async function listScalesByProfessional(token, professionalId) {
 		return [];
 	}
 
-	const client = createClient(token);
-	const response = await client.get(`/escalas/${professionalId}`);
-	return Array.isArray(response.data) ? response.data.map(normalizeScale) : [];
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
+
+	const scales = await localProfessionalsService.listScalesByProfessional(viewer, professionalId);
+	return Array.isArray(scales) ? scales.map(normalizeScale) : [];
 }
 
 async function createScale(token, form) {
-	const client = createClient(token);
-	const payload = {
-		profissional_id: String(form.profissional_id || '').trim(),
-		dia_semana: Number(form.dia_semana),
-		hora_inicio: String(form.hora_inicio || '').trim(),
-		hora_fim: String(form.hora_fim || '').trim(),
-	};
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
 
 	try {
-		const response = await client.post('/escalas/', payload);
-		return normalizeScale(response.data || payload);
+		return await localProfessionalsService.createScale(viewer, form);
 	} catch (error) {
-		const customError = new Error(extractApiError(error));
-		customError.statusCode = error.response?.status || 500;
+		const customError = new Error(error.message || extractApiError(error));
+		customError.statusCode = error.statusCode || 500;
 		throw customError;
 	}
 }
@@ -120,27 +117,30 @@ async function listBlocksByProfessional(token, professionalId) {
 		return [];
 	}
 
-	const client = createClient(token);
-	const response = await client.get(`/bloqueios/${professionalId}`);
-	return Array.isArray(response.data) ? response.data.map(normalizeBlock) : [];
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
+
+	const blocks = await localProfessionalsService.listBlocksByProfessional(viewer, professionalId);
+	return Array.isArray(blocks) ? blocks.map(normalizeBlock) : [];
 }
 
 async function createBlock(token, form) {
-	const client = createClient(token);
-	const payload = {
-		profissional_id: String(form.profissional_id || '').trim(),
-		data: String(form.data || '').trim(),
-		hora_inicio: String(form.hora_inicio || '').trim(),
-		hora_fim: String(form.hora_fim || '').trim(),
-		motivo: String(form.motivo || '').trim() || 'Bloqueio manual',
-	};
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
 
 	try {
-		const response = await client.post('/bloqueios/', payload);
-		return normalizeBlock(response.data || payload);
+		return await localProfessionalsService.createBlock(viewer, form);
 	} catch (error) {
-		const customError = new Error(extractApiError(error));
-		customError.statusCode = error.response?.status || 500;
+		const customError = new Error(error.message || extractApiError(error));
+		customError.statusCode = error.statusCode || 500;
 		throw customError;
 	}
 }

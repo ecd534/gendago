@@ -1,18 +1,5 @@
-const axios = require('axios');
-
-const venusApiBaseUrl = process.env.VENUS_API_URL || 'http://127.0.0.1:8000';
-
-function createClient(token) {
-	return axios.create({
-		baseURL: venusApiBaseUrl,
-		timeout: 10000,
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`,
-		},
-	});
-}
+const localClientsService = require('../backend/domains/clientes/service');
+const { verifyAccessToken } = require('../backend/security/jwt');
 
 function normalizeClient(client) {
 	return {
@@ -41,61 +28,59 @@ function extractApiError(error) {
 }
 
 async function listClientesByCompany(token, companyId) {
-	const client = createClient(token);
-	const response = await client.get('/clientes/');
-	const clients = Array.isArray(response.data) ? response.data.map(normalizeClient) : [];
-
-	if (!companyId) {
-		return clients;
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
 	}
 
-	return clients.filter((item) => item.empresa_id === companyId);
+	const clients = await localClientsService.listClients(viewer, companyId || null);
+	return Array.isArray(clients) ? clients.map(normalizeClient) : [];
 }
 
 async function getClienteById(token, clientId) {
-	const client = createClient(token);
-	const response = await client.get(`/clientes/${clientId}`);
-	return normalizeClient(response.data || {});
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
+
+	return normalizeClient(await localClientsService.getClientById(viewer, clientId));
 }
 
 async function createCliente(token, form) {
-	const client = createClient(token);
-	const payload = {
-		telefone: String(form.telefone || '').trim(),
-		nome: String(form.nome || '').trim(),
-		empresa_id: String(form.empresa_id || '').trim(),
-		email: String(form.email || '').trim() || null,
-		idade: form.idade === '' || form.idade === null || typeof form.idade === 'undefined' ? null : Number(form.idade),
-		status: String(form.status || 'Ativo').trim() || 'Ativo',
-	};
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
 
 	try {
-		const response = await client.post('/clientes/clientes/', payload);
-		return normalizeClient(response.data || payload);
+		return normalizeClient(await localClientsService.createClient(viewer, form));
 	} catch (error) {
-		const customError = new Error(extractApiError(error));
-		customError.statusCode = error.response?.status || 500;
+		const customError = new Error(error.message || extractApiError(error));
+		customError.statusCode = error.statusCode || 500;
 		throw customError;
 	}
 }
 
 async function updateCliente(token, clientId, form) {
-	const client = createClient(token);
-	const payload = {
-		nome: String(form.nome || '').trim() || null,
-		telefone: String(form.telefone || '').trim() || null,
-		email: String(form.email || '').trim() || null,
-		idade: form.idade === '' || form.idade === null || typeof form.idade === 'undefined' ? null : Number(form.idade),
-		status: String(form.status || '').trim() || null,
-		empresa_id: String(form.empresa_id || '').trim() || null,
-	};
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
 
 	try {
-		const response = await client.patch(`/clientes/clientes/${clientId}`, payload);
-		return normalizeClient(response.data || { id: clientId, ...form });
+		const payload = await localClientsService.updateClient(viewer, clientId, form);
+		return normalizeClient(payload?.cliente || { id: clientId, ...form });
 	} catch (error) {
-		const customError = new Error(extractApiError(error));
-		customError.statusCode = error.response?.status || 500;
+		const customError = new Error(error.message || extractApiError(error));
+		customError.statusCode = error.statusCode || 500;
 		throw customError;
 	}
 }

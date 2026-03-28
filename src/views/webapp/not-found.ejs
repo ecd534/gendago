@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title><%= title %> | Gendago</title>
+	<link rel="preconnect" href="https://cdn.jsdelivr.net">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+	<link rel="stylesheet" href="/styles/webapp-store.css">
+	<link rel="stylesheet" href="/styles/webapp-not-found.css">
+</head>
+<body class="not-found-body">
+	<main class="not-found-page">
+		<section class="not-found-card" role="status" aria-live="polite">
+			<img
+				src="/images/not-found-404.png"
+				alt="Ilustracao de pagina nao encontrada"
+				class="not-found-image">
+
+			<h1 class="not-found-title">Estamos cuidando disso!</h1>
+			<p class="not-found-message"><%= message || 'Confira o link informado e tente novamente.' %></p>
+			<p class="not-found-slug">Loja consultada: <strong><%= slug %></strong></p>
+
+			<div class="not-found-actions">
+				<a href="/" class="btn btn-dark btn-not-found">Ir para inicio</a>
+				<button type="button" class="btn btn-outline-secondary btn-not-found" onclick="window.history.back()">Voltar</button>
+			</div>
+		</section>
+	</main>
+</body>
+</html>

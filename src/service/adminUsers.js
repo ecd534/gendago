@@ -1,18 +1,5 @@
-const axios = require('axios');
-
-const venusApiBaseUrl = process.env.VENUS_API_URL || 'http://127.0.0.1:8000';
-
-function createClient(token) {
-	return axios.create({
-		baseURL: venusApiBaseUrl,
-		timeout: 10000,
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`,
-		},
-	});
-}
+const usuariosLocalService = require('../backend/domains/usuarios/service');
+const { verifyAccessToken } = require('../backend/security/jwt');
 
 function normalizeUser(user) {
 	return {
@@ -56,9 +43,15 @@ function extractApiError(error) {
 }
 
 async function listUsers(token) {
-	const client = createClient(token);
-	const response = await client.get('/usuarios/');
-	return Array.isArray(response.data) ? response.data.map(normalizeUser) : [];
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
+
+	const users = await usuariosLocalService.listUsers();
+	return Array.isArray(users) ? users.map(normalizeUser) : [];
 }
 
 async function getUserById(token, userId) {
@@ -67,20 +60,31 @@ async function getUserById(token, userId) {
 }
 
 async function createUser(token, form) {
-	const client = createClient(token);
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
 
 	try {
-		const response = await client.post('/usuarios/', buildPayload(form, { includePassword: true }));
-		return normalizeUser(response.data || form);
+		const created = await usuariosLocalService.createUser(buildPayload(form, { includePassword: true }));
+		return normalizeUser(created?.user || { id: created?.id, ...form });
 	} catch (error) {
-		const customError = new Error(extractApiError(error));
-		customError.statusCode = error.response?.status || 500;
+		const customError = new Error(error.message || extractApiError(error));
+		customError.statusCode = error.statusCode || 500;
 		throw customError;
 	}
 }
 
 async function updateUser(token, userId, form) {
-	const client = createClient(token);
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
+
 	const payload = buildPayload(form, { includePassword: Boolean(form.senha) });
 
 	if (!form.senha) {
@@ -88,26 +92,31 @@ async function updateUser(token, userId, form) {
 	}
 
 	try {
-		const response = await client.put(`/usuarios/${userId}`, payload);
-		return normalizeUser(response.data || { ...form, id: userId });
+		const updated = await usuariosLocalService.updateUser(userId, payload);
+		return normalizeUser(updated || { ...form, id: userId });
 	} catch (error) {
-		const customError = new Error(extractApiError(error));
-		customError.statusCode = error.response?.status || 500;
+		const customError = new Error(error.message || extractApiError(error));
+		customError.statusCode = error.statusCode || 500;
 		throw customError;
 	}
 }
 
 async function toggleUserStatus(token, userId, active) {
-	const client = createClient(token);
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
 
 	try {
-		const response = await client.put(`/usuarios/${userId}`, {
+		const updated = await usuariosLocalService.updateUser(userId, {
 			ativo: Boolean(active),
 		});
-		return normalizeUser(response.data || { id: userId, ativo: active });
+		return normalizeUser(updated || { id: userId, ativo: active });
 	} catch (error) {
-		const customError = new Error(extractApiError(error));
-		customError.statusCode = error.response?.status || 500;
+		const customError = new Error(error.message || extractApiError(error));
+		customError.statusCode = error.statusCode || 500;
 		throw customError;
 	}
 }

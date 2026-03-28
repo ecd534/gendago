@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title><%= title %> | Gendago</title>
+	<link rel="preconnect" href="https://cdn.jsdelivr.net">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+	<link rel="stylesheet" href="/styles/admin.css">
+</head>
+<body>
+	<div class="container-fluid backoffice-shell" id="agendamentos-page"
+		data-update-endpoint-template="/admin/api/agendamentos/__ID__/status">
+		<div class="row min-vh-100">
+			<%- include('../partials/sidebar', { currentAdmin, page }) %>
+
+			<main class="col-12 col-lg-9 col-xl-10 content-wrap">
+				<section class="glass-card p-4 p-xl-5 mb-4">
+					<div class="d-flex flex-column flex-xl-row justify-content-between gap-3 align-items-xl-start">
+						<div>
+							<p class="text-uppercase small fw-semibold text-secondary mb-2">Agenda</p>
+							<h1 class="display-6 fw-semibold mb-2">Gerenciar Agendamentos</h1>
+							<p class="text-secondary mb-0">
+								<% if (appointments.length > 0) { %>
+									<span class="badge text-bg-dark rounded-pill me-1"><%= appointments.length %></span>
+									agendamento<%= appointments.length > 1 ? 's' : '' %> em
+									<strong><%= selectedDate %></strong>
+								<% } else { %>
+									Nenhum agendamento em <strong><%= selectedDate %></strong>.
+								<% } %>
+							</p>
+						</div>
+
+						<form action="/admin/agendamentos" method="get" class="d-flex flex-column flex-md-row gap-2 align-items-md-end flex-shrink-0">
+							<% if (isMaster && activeCompanies.length > 0) { %>
+								<div>
+									<label class="form-label small fw-semibold mb-1">Empresa</label>
+									<select class="form-select admin-input" name="empresa_id" onchange="this.form.submit()">
+										<% activeCompanies.forEach((company) => { %>
+											<option value="<%= company.id %>" <%= selectedCompanyId === company.id ? 'selected' : '' %>><%= company.nome %></option>
+										<% }) %>
+									</select>
+								</div>
+							<% } else { %>
+								<div class="align-self-center">
+									<span class="badge rounded-pill text-bg-light px-3 py-2"><%= selectedCompanyName || 'Sua empresa' %></span>
+								</div>
+							<% } %>
+							<div>
+								<label class="form-label small fw-semibold mb-1">Data</label>
+								<input type="date" class="form-control admin-input" name="data" value="<%= selectedDate %>">
+							</div>
+							<% if (isMaster) { %>
+								<input type="hidden" name="empresa_id" value="<%= selectedCompanyId || '' %>" id="hidden-company-id">
+							<% } %>
+							<button type="submit" class="btn btn-dark rounded-pill px-4">Filtrar</button>
+						</form>
+					</div>
+				</section>
+
+				<% if (locals.flashMessage) { %>
+					<div class="alert alert-<%= flashMessage.type %> border-0 rounded-4 mb-4" role="alert"><%= flashMessage.text %></div>
+				<% } %>
+
+				<% if (!appointments.length) { %>
+					<section class="glass-card p-4 text-center text-secondary">
+						<i class="bi bi-calendar-x fs-2 d-block mb-2"></i>
+						Nenhum agendamento encontrado para esta data.
+					</section>
+				<% } %>
+
+				<div class="row g-3" id="appointments-container">
+					<% appointments.forEach((item) => { %>
+						<%
+							const statusMap = {
+								agendado: 'primary',
+								confirmado: 'success',
+								cancelado: 'danger',
+								concluido: 'secondary',
+							};
+							const badgeClass = statusMap[String(item.status || 'agendado').toLowerCase()] || 'light';
+							const horaStr = item.inicio
+								? new Date(item.inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
+								: '--:--';
+							const valorStr = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(item.valor || 0));
+						%>
+						<div class="col-12 col-md-6 col-xl-4 appointment-card-wrap" data-id="<%= item.id %>">
+							<div class="glass-card p-4 h-100 d-flex flex-column gap-3">
+								<div class="d-flex justify-content-between align-items-center gap-2">
+									<span class="fs-5 fw-semibold"><i class="bi bi-clock me-1"></i><%= horaStr %></span>
+									<span class="badge text-bg-<%= badgeClass %> rounded-pill status-badge"><%= item.status || 'agendado' %></span>
+								</div>
+
+								<div>
+									<p class="fw-semibold mb-0"><%= item.cliente || 'Cliente' %></p>
+									<p class="small text-secondary mb-0"><i class="bi bi-telephone me-1"></i><%= item.telefone || 'Sem telefone' %></p>
+								</div>
+
+								<div>
+									<p class="fw-semibold mb-0"><%= item.servico || 'Servico' %></p>
+									<p class="small mb-0">
+										<span class="fw-semibold text-success"><%= valorStr %></span>
+										<% if (item.profissional) { %>
+											&nbsp;&bull;&nbsp;<span class="text-secondary"><%= item.profissional %></span>
+										<% } %>
+									</p>
+								</div>
+
+								<div class="mt-auto d-flex gap-2 align-items-center">
+									<select class="form-select admin-input form-select-sm status-select">
+										<option value="agendado" <%= item.status === 'agendado' ? 'selected' : '' %>>Agendado</option>
+										<option value="confirmado" <%= item.status === 'confirmado' ? 'selected' : '' %>>Confirmado</option>
+										<option value="concluido" <%= item.status === 'concluido' ? 'selected' : '' %>>Concluido</option>
+										<option value="cancelado" <%= item.status === 'cancelado' ? 'selected' : '' %>>Cancelado</option>
+									</select>
+									<button type="button" class="btn btn-dark btn-sm rounded-pill px-3 flex-shrink-0 update-status-btn">Atualizar</button>
+								</div>
+							</div>
+						</div>
+					<% }) %>
+				</div>
+			</main>
+		</div>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
+	<script>
+		(function () {
+			const page = document.getElementById('agendamentos-page');
+			if (!page) return;
+
+			const endpointTemplate = page.dataset.updateEndpointTemplate;
+
+			const statusBadgeColor = {
+				agendado: 'primary',
+				confirmado: 'success',
+				concluido: 'secondary',
+				cancelado: 'danger',
+			};
+
+			document.querySelectorAll('.appointment-card-wrap').forEach((wrap) => {
+				const id = wrap.dataset.id;
+				const btn = wrap.querySelector('.update-status-btn');
+				const select = wrap.querySelector('.status-select');
+				const badge = wrap.querySelector('.status-badge');
+
+				if (!btn || !select || !badge) return;
+
+				btn.addEventListener('click', async () => {
+					const newStatus = select.value;
+					const endpoint = endpointTemplate.replace('__ID__', encodeURIComponent(id));
+
+					btn.disabled = true;
+					btn.textContent = '...';
+
+					try {
+						const response = await fetch(endpoint, {
+							method: 'PATCH',
+							headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+							body: JSON.stringify({ novo_status: newStatus }),
+						});
+
+						const result = await response.json();
+
+						if (!response.ok) {
+							throw new Error(result.message || 'Erro ao atualizar status.');
+						}
+
+						const color = statusBadgeColor[newStatus] || 'light';
+						badge.className = `badge text-bg-${color} rounded-pill status-badge`;
+						badge.textContent = newStatus;
+					} catch (error) {
+						alert(error.message);
+					} finally {
+						btn.disabled = false;
+						btn.textContent = 'Atualizar';
+					}
+				});
+			});
+
+			// When master selects a company via the select, keep hidden input in sync
+			const companySelect = document.querySelector('select[name="empresa_id"]');
+			const hiddenCompany = document.getElementById('hidden-company-id');
+			if (companySelect && hiddenCompany) {
+				companySelect.addEventListener('change', () => {
+					hiddenCompany.value = companySelect.value;
+				});
+			}
+		}());
+	</script>
+</body>
+</html>
