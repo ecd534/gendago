@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title><%= title %> | Gendago</title>
+	<link rel="preconnect" href="https://cdn.jsdelivr.net">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+	<link rel="stylesheet" href="/styles/admin.css">
+</head>
+<body>
+	<div class="container-fluid backoffice-shell" id="professional-page"
+		data-professionals-endpoint="/admin/api/profissionais"
+		data-create-professional-endpoint="/admin/api/profissionais"
+		data-scales-endpoint-template="/admin/api/profissionais/__PROFESSIONAL_ID__/escalas"
+		data-blocks-endpoint-template="/admin/api/profissionais/__PROFESSIONAL_ID__/bloqueios"
+		data-company-id="<%= selectedCompanyId || '' %>">
+		<div class="row min-vh-100">
+			<%- include('../partials/sidebar', { currentAdmin, page }) %>
+
+			<main class="col-12 col-lg-9 col-xl-10 content-wrap">
+				<section class="glass-card p-4 p-xl-5 mb-4">
+					<div class="d-flex flex-column flex-xl-row justify-content-between gap-3 align-items-xl-center">
+						<div>
+							<p class="text-uppercase small fw-semibold text-secondary mb-2">Profissionais + Config</p>
+							<h1 class="display-6 fw-semibold mb-2">Profissionais</h1>
+							<p class="text-secondary mb-0">Configure equipe, escala semanal e bloqueios para controlar disponibilidade no agendamento do webapp.</p>
+						</div>
+						<div class="d-flex flex-column flex-md-row gap-2 align-items-md-center">
+							<% if (isMaster) { %>
+								<form action="/admin/profissionais" method="get" class="d-flex gap-2 align-items-center flex-wrap">
+									<select class="form-select admin-input" name="empresa_id" onchange="this.form.submit()">
+										<% activeCompanies.forEach((company) => { %>
+											<option value="<%= company.id %>" <%= selectedCompanyId === company.id ? 'selected' : '' %>><%= company.nome %></option>
+										<% }) %>
+									</select>
+								</form>
+							<% } else { %>
+								<span class="badge rounded-pill text-bg-light px-3 py-2"><%= selectedCompanyName || 'Empresa nao vinculada' %></span>
+							<% } %>
+							<button type="button" class="btn btn-dark rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createProfessionalModal">Novo profissional</button>
+						</div>
+					</div>
+				</section>
+
+				<% if (flashMessage) { %>
+					<div class="alert alert-<%= flashMessage.type %> border-0 rounded-4 mb-4" role="alert"><%= flashMessage.text %></div>
+				<% } %>
+
+				<section class="glass-card p-4">
+					<div class="table-responsive">
+						<table class="table align-middle admin-table mb-0" id="professionals-table">
+							<thead>
+								<tr>
+									<th>Profissional</th>
+									<th>Status</th>
+									<th>Empresa</th>
+									<th class="text-end">Acoes</th>
+								</tr>
+							</thead>
+							<tbody id="professionals-table-body">
+								<% if (!professionals.length) { %>
+									<tr>
+										<td data-label="Profissional" colspan="4" class="text-secondary">Nenhum profissional cadastrado para a empresa selecionada.</td>
+									</tr>
+								<% } %>
+								<% professionals.forEach((professional) => { %>
+									<tr>
+										<td data-label="Profissional">
+											<div class="fw-semibold"><%= professional.nome %></div>
+											<div class="small text-secondary"><%= professional.id %></div>
+										</td>
+										<td data-label="Status">
+											<span class="badge rounded-pill <%= professional.ativo ? 'badge-status-active' : 'badge-status-inactive' %>"><%= professional.ativo ? 'Ativo' : 'Inativo' %></span>
+										</td>
+										<td data-label="Empresa"><%= selectedCompanyName || professional.empresa_id %></td>
+										<td data-label="Acoes">
+											<div class="d-flex justify-content-end gap-2 flex-wrap">
+												<button type="button" class="btn btn-sm btn-outline-dark rounded-pill manage-professional-button"
+													data-bs-toggle="modal"
+													data-bs-target="#manageProfessionalModal"
+													data-professional-id="<%= professional.id %>"
+													data-professional-name="<%- professional.nome %>">
+													Gerenciar
+												</button>
+											</div>
+										</td>
+									</tr>
+								<% }) %>
+							</tbody>
+						</table>
+					</div>
+				</section>
+			</main>
+		</div>
+	</div>
+
+	<div class="modal fade" id="createProfessionalModal" tabindex="-1" aria-labelledby="createProfessionalModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content border-0 rounded-4">
+				<div class="modal-header border-0 pb-0">
+					<div>
+						<h2 class="modal-title h4 mb-1" id="createProfessionalModalLabel">Novo profissional</h2>
+						<p class="text-secondary mb-0">Cadastre um novo profissional para habilitar sua disponibilidade no agendamento.</p>
+					</div>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+				</div>
+				<div class="modal-body pt-4">
+					<div id="create-professional-feedback" class="alert d-none rounded-4 border-0" role="alert"></div>
+					<form id="create-professional-form" class="row g-3">
+						<div class="col-12">
+							<label class="form-label fw-semibold" for="new-professional-name">Nome</label>
+							<input class="form-control admin-input" id="new-professional-name" name="nome" required>
+						</div>
+						<div class="col-12 col-md-6">
+							<label class="form-label fw-semibold" for="new-professional-status">Status</label>
+							<select class="form-select admin-input" id="new-professional-status" name="ativo">
+								<option value="true" selected>Ativo</option>
+								<option value="false">Inativo</option>
+							</select>
+						</div>
+						<div class="col-12 col-md-6">
+							<label class="form-label fw-semibold" for="new-professional-company">Empresa</label>
+							<% if (isMaster) { %>
+								<select class="form-select admin-input" id="new-professional-company" name="empresa_id" required>
+									<option value="">Selecione uma empresa ativa</option>
+									<% activeCompanies.forEach((company) => { %>
+										<option value="<%= company.id %>" <%= selectedCompanyId === company.id ? 'selected' : '' %>><%= company.nome %></option>
+									<% }) %>
+								</select>
+							<% } else { %>
+								<input type="hidden" name="empresa_id" id="new-professional-company" value="<%= selectedCompanyId %>">
+								<input class="form-control admin-input" value="<%= selectedCompanyName || selectedCompanyId %>" readonly>
+							<% } %>
+						</div>
+						<div class="col-12 d-flex justify-content-end gap-2 pt-2">
+							<button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+							<button type="submit" class="btn btn-dark rounded-pill px-4">Criar profissional</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal fade" id="manageProfessionalModal" tabindex="-1" aria-labelledby="manageProfessionalModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-xl modal-dialog-scrollable">
+			<div class="modal-content border-0 rounded-4">
+				<div class="modal-header border-0 pb-0">
+					<div>
+						<h2 class="modal-title h4 mb-1" id="manageProfessionalModalLabel">Gerenciar profissional</h2>
+						<p class="text-secondary mb-0" id="manageProfessionalSubtitle">Configure escala semanal e bloqueios de ausencias.</p>
+					</div>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+				</div>
+				<div class="modal-body pt-4">
+					<div id="manage-professional-feedback" class="alert d-none rounded-4 border-0" role="alert"></div>
+
+					<section class="glass-card p-4 mb-4">
+						<h3 class="h5 mb-3">Nova faixa de escala</h3>
+						<form id="create-scale-form" class="row g-3">
+							<div class="col-12 col-md-4">
+								<label class="form-label fw-semibold" for="scale-day">Dia da semana</label>
+								<select class="form-select admin-input" id="scale-day" name="dia_semana" required>
+									<option value="1">Segunda-feira</option>
+									<option value="2">Terca-feira</option>
+									<option value="3">Quarta-feira</option>
+									<option value="4">Quinta-feira</option>
+									<option value="5">Sexta-feira</option>
+									<option value="6">Sabado</option>
+									<option value="7">Domingo</option>
+								</select>
+							</div>
+							<div class="col-12 col-md-3">
+								<label class="form-label fw-semibold" for="scale-start">Inicio</label>
+								<input type="time" class="form-control admin-input" id="scale-start" name="hora_inicio" required>
+							</div>
+							<div class="col-12 col-md-3">
+								<label class="form-label fw-semibold" for="scale-end">Fim</label>
+								<input type="time" class="form-control admin-input" id="scale-end" name="hora_fim" required>
+							</div>
+							<div class="col-12 col-md-2 d-grid">
+								<button type="submit" class="btn btn-dark rounded-pill">Adicionar</button>
+							</div>
+						</form>
+						<div class="professional-list-stack mt-3" id="scale-list"></div>
+					</section>
+
+					<section class="glass-card p-4">
+						<h3 class="h5 mb-3">Novo bloqueio / folga</h3>
+						<form id="create-block-form" class="row g-3">
+							<div class="col-12 col-md-3">
+								<label class="form-label fw-semibold" for="block-date">Data</label>
+								<input type="date" class="form-control admin-input" id="block-date" name="data" required>
+							</div>
+							<div class="col-12 col-md-2">
+								<label class="form-label fw-semibold" for="block-start">Inicio</label>
+								<input type="time" class="form-control admin-input" id="block-start" name="hora_inicio" required>
+							</div>
+							<div class="col-12 col-md-2">
+								<label class="form-label fw-semibold" for="block-end">Fim</label>
+								<input type="time" class="form-control admin-input" id="block-end" name="hora_fim" required>
+							</div>
+							<div class="col-12 col-md-3">
+								<label class="form-label fw-semibold" for="block-reason">Motivo</label>
+								<input class="form-control admin-input" id="block-reason" name="motivo" placeholder="Ex.: Aula de pilates">
+							</div>
+							<div class="col-12 col-md-2 d-grid">
+								<button type="submit" class="btn btn-dark rounded-pill">Adicionar</button>
+							</div>
+						</form>
+						<div class="professional-list-stack mt-3" id="block-list"></div>
+					</section>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
+	<script>
+		(function () {
+			const page = document.getElementById('professional-page');
+			if (!page) {
+				return;
+			}
+
+			const dayNames = {
+				1: 'Segunda-feira',
+				2: 'Terca-feira',
+				3: 'Quarta-feira',
+				4: 'Quinta-feira',
+				5: 'Sexta-feira',
+				6: 'Sabado',
+				7: 'Domingo',
+			};
+
+			let selectedProfessional = null;
+			const companyId = page.dataset.companyId || '';
+
+			const manageFeedback = document.getElementById('manage-professional-feedback');
+			const createFeedback = document.getElementById('create-professional-feedback');
+			const manageSubtitle = document.getElementById('manageProfessionalSubtitle');
+			const scaleList = document.getElementById('scale-list');
+			const blockList = document.getElementById('block-list');
+			const createProfessionalForm = document.getElementById('create-professional-form');
+			const createScaleForm = document.getElementById('create-scale-form');
+			const createBlockForm = document.getElementById('create-block-form');
+
+			function setFeedback(element, type, text) {
+				if (!element) {
+					return;
+				}
+
+				if (!text) {
+					element.className = 'alert d-none rounded-4 border-0';
+					element.textContent = '';
+					return;
+				}
+
+				element.className = `alert alert-${type} rounded-4 border-0`;
+				element.textContent = text;
+			}
+
+			function parseResponse(response) {
+				return response.text().then((text) => {
+					try {
+						return text ? JSON.parse(text) : {};
+					} catch (error) {
+						return { message: text || 'Resposta invalida da API.' };
+					}
+				});
+			}
+
+			function toTimeLabel(value) {
+				return String(value || '').slice(0, 5);
+			}
+
+			function renderScales(scales) {
+				if (!scaleList) {
+					return;
+				}
+
+				if (!scales.length) {
+					scaleList.innerHTML = '<div class="empty-category-state">Nenhuma escala cadastrada para este profissional.</div>';
+					return;
+				}
+
+				const sorted = [...scales].sort((a, b) => a.dia_semana - b.dia_semana || String(a.hora_inicio).localeCompare(String(b.hora_inicio)));
+				scaleList.innerHTML = sorted.map((scale) => `
+					<div class="professional-stack-item">
+						<div class="fw-semibold">${dayNames[scale.dia_semana] || `Dia ${scale.dia_semana}`}</div>
+						<div class="small text-secondary">${toTimeLabel(scale.hora_inicio)} - ${toTimeLabel(scale.hora_fim)}</div>
+					</div>
+				`).join('');
+			}
+
+			function renderBlocks(blocks) {
+				if (!blockList) {
+					return;
+				}
+
+				if (!blocks.length) {
+					blockList.innerHTML = '<div class="empty-category-state">Nenhum bloqueio cadastrado para este profissional.</div>';
+					return;
+				}
+
+				const sorted = [...blocks].sort((a, b) => String(a.data).localeCompare(String(b.data)) || String(a.hora_inicio).localeCompare(String(b.hora_inicio)));
+				blockList.innerHTML = sorted.map((block) => `
+					<div class="professional-stack-item">
+						<div class="fw-semibold">${block.data} · ${toTimeLabel(block.hora_inicio)} - ${toTimeLabel(block.hora_fim)}</div>
+						<div class="small text-secondary">${block.motivo || 'Bloqueio manual'}</div>
+					</div>
+				`).join('');
+			}
+
+			function professionalQuery() {
+				if (!companyId) {
+					return '';
+				}
+
+				return `?empresa_id=${encodeURIComponent(companyId)}`;
+			}
+
+			async function loadScales() {
+				if (!selectedProfessional) {
+					renderScales([]);
+					return;
+				}
+
+				const endpointTemplate = page.dataset.scalesEndpointTemplate;
+				const endpoint = endpointTemplate.replace('__PROFESSIONAL_ID__', encodeURIComponent(selectedProfessional.id));
+				const response = await fetch(`${endpoint}${professionalQuery()}`, { headers: { Accept: 'application/json' } });
+				const payload = await parseResponse(response);
+
+				if (!response.ok) {
+					throw new Error(payload.message || 'Nao foi possivel carregar as escalas.');
+				}
+
+				renderScales(Array.isArray(payload) ? payload : []);
+			}
+
+			async function loadBlocks() {
+				if (!selectedProfessional) {
+					renderBlocks([]);
+					return;
+				}
+
+				const endpointTemplate = page.dataset.blocksEndpointTemplate;
+				const endpoint = endpointTemplate.replace('__PROFESSIONAL_ID__', encodeURIComponent(selectedProfessional.id));
+				const response = await fetch(`${endpoint}${professionalQuery()}`, { headers: { Accept: 'application/json' } });
+				const payload = await parseResponse(response);
+
+				if (!response.ok) {
+					throw new Error(payload.message || 'Nao foi possivel carregar os bloqueios.');
+				}
+
+				renderBlocks(Array.isArray(payload) ? payload : []);
+			}
+
+			document.querySelectorAll('.manage-professional-button').forEach((button) => {
+				button.addEventListener('click', async () => {
+					selectedProfessional = {
+						id: button.dataset.professionalId,
+						nome: button.dataset.professionalName,
+					};
+
+					manageSubtitle.textContent = `${selectedProfessional.nome} · Configure escala semanal e bloqueios de ausencias.`;
+					setFeedback(manageFeedback, null, '');
+					renderScales([]);
+					renderBlocks([]);
+
+					try {
+						await Promise.all([loadScales(), loadBlocks()]);
+					} catch (error) {
+						setFeedback(manageFeedback, 'danger', error.message);
+					}
+				});
+			});
+
+			if (createProfessionalForm) {
+				createProfessionalForm.addEventListener('submit', async (event) => {
+					event.preventDefault();
+					setFeedback(createFeedback, null, '');
+
+					const formData = new FormData(createProfessionalForm);
+					const payload = {
+						nome: String(formData.get('nome') || '').trim(),
+						ativo: formData.get('ativo') === 'true',
+						empresa_id: String(formData.get('empresa_id') || companyId).trim(),
+					};
+
+					try {
+						const response = await fetch(page.dataset.createProfessionalEndpoint, {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								Accept: 'application/json',
+							},
+							body: JSON.stringify(payload),
+						});
+						const result = await parseResponse(response);
+
+						if (!response.ok) {
+							throw new Error(result.message || 'Nao foi possivel criar o profissional.');
+						}
+
+						setFeedback(createFeedback, 'success', 'Profissional criado com sucesso.');
+						setTimeout(() => {
+							window.location.reload();
+						}, 450);
+					} catch (error) {
+						setFeedback(createFeedback, 'danger', error.message);
+					}
+				});
+			}
+
+			if (createScaleForm) {
+				createScaleForm.addEventListener('submit', async (event) => {
+					event.preventDefault();
+					setFeedback(manageFeedback, null, '');
+
+					if (!selectedProfessional) {
+						setFeedback(manageFeedback, 'warning', 'Selecione um profissional para cadastrar escala.');
+						return;
+					}
+
+					const formData = new FormData(createScaleForm);
+					const payload = {
+						empresa_id: companyId,
+						dia_semana: Number(formData.get('dia_semana')),
+						hora_inicio: formData.get('hora_inicio'),
+						hora_fim: formData.get('hora_fim'),
+					};
+
+					try {
+						const endpointTemplate = page.dataset.scalesEndpointTemplate;
+						const endpoint = endpointTemplate.replace('__PROFESSIONAL_ID__', encodeURIComponent(selectedProfessional.id));
+						const response = await fetch(endpoint, {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								Accept: 'application/json',
+							},
+							body: JSON.stringify(payload),
+						});
+						const result = await parseResponse(response);
+
+						if (!response.ok) {
+							throw new Error(result.message || 'Nao foi possivel cadastrar a escala.');
+						}
+
+						createScaleForm.reset();
+						setFeedback(manageFeedback, 'success', 'Escala cadastrada com sucesso.');
+						await loadScales();
+					} catch (error) {
+						setFeedback(manageFeedback, 'danger', error.message);
+					}
+				});
+			}
+
+			if (createBlockForm) {
+				createBlockForm.addEventListener('submit', async (event) => {
+					event.preventDefault();
+					setFeedback(manageFeedback, null, '');
+
+					if (!selectedProfessional) {
+						setFeedback(manageFeedback, 'warning', 'Selecione um profissional para cadastrar bloqueio.');
+						return;
+					}
+
+					const formData = new FormData(createBlockForm);
+					const payload = {
+						empresa_id: companyId,
+						data: formData.get('data'),
+						hora_inicio: formData.get('hora_inicio'),
+						hora_fim: formData.get('hora_fim'),
+						motivo: formData.get('motivo'),
+					};
+
+					try {
+						const endpointTemplate = page.dataset.blocksEndpointTemplate;
+						const endpoint = endpointTemplate.replace('__PROFESSIONAL_ID__', encodeURIComponent(selectedProfessional.id));
+						const response = await fetch(endpoint, {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								Accept: 'application/json',
+							},
+							body: JSON.stringify(payload),
+						});
+						const result = await parseResponse(response);
+
+						if (!response.ok) {
+							throw new Error(result.message || 'Nao foi possivel cadastrar o bloqueio.');
+						}
+
+						createBlockForm.reset();
+						setFeedback(manageFeedback, 'success', 'Bloqueio cadastrado com sucesso.');
+						await loadBlocks();
+					} catch (error) {
+						setFeedback(manageFeedback, 'danger', error.message);
+					}
+				});
+			}
+		})();
+	</script>
+</body>
+</html>

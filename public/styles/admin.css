@@ -178,6 +178,18 @@ body {
 	background: rgba(255, 255, 255, 0.6);
 }
 
+.professional-list-stack {
+	display: grid;
+	gap: 0.75rem;
+}
+
+.professional-stack-item {
+	padding: 0.9rem 1rem;
+	border: 1px solid var(--bo-stroke);
+	border-radius: 14px;
+	background: rgba(255, 255, 255, 0.72);
+}
+
 @media (max-width: 991.98px) {
 	.sidebar {
 		border-right: 0;

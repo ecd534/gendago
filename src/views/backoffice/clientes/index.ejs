@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title><%= title %> | Gendago</title>
+	<link rel="preconnect" href="https://cdn.jsdelivr.net">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+	<link rel="stylesheet" href="/styles/admin.css">
+</head>
+<body>
+	<div class="container-fluid backoffice-shell" id="client-page"
+		data-create-client-endpoint="/admin/api/clientes"
+		data-client-detail-endpoint-template="/admin/api/clientes/__CLIENT_ID__"
+		data-company-id="<%= selectedCompanyId || '' %>">
+		<div class="row min-vh-100">
+			<%- include('../partials/sidebar', { currentAdmin, page }) %>
+
+			<main class="col-12 col-lg-9 col-xl-10 content-wrap">
+				<section class="glass-card p-4 p-xl-5 mb-4">
+					<div class="d-flex flex-column flex-xl-row justify-content-between gap-3 align-items-xl-center">
+						<div>
+							<p class="text-uppercase small fw-semibold text-secondary mb-2">Cadastro</p>
+							<h1 class="display-6 fw-semibold mb-2">Clientes</h1>
+							<p class="text-secondary mb-0">Gerencie clientes por empresa sem alterar a regra atual de insercao autonoma durante o agendamento.</p>
+						</div>
+						<div class="d-flex flex-column flex-md-row gap-2 align-items-md-center">
+							<% if (isMaster) { %>
+								<form action="/admin/clientes" method="get" class="d-flex gap-2 align-items-center flex-wrap">
+									<select class="form-select admin-input" name="empresa_id" onchange="this.form.submit()">
+										<% activeCompanies.forEach((company) => { %>
+											<option value="<%= company.id %>" <%= selectedCompanyId === company.id ? 'selected' : '' %>><%= company.nome %></option>
+										<% }) %>
+									</select>
+								</form>
+							<% } else { %>
+								<span class="badge rounded-pill text-bg-light px-3 py-2"><%= selectedCompanyName || 'Empresa nao vinculada' %></span>
+							<% } %>
+							<button type="button" class="btn btn-dark rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createClientModal">Novo cliente</button>
+						</div>
+					</div>
+				</section>
+
+				<% if (flashMessage) { %>
+					<div class="alert alert-<%= flashMessage.type %> border-0 rounded-4 mb-4" role="alert"><%= flashMessage.text %></div>
+				<% } %>
+
+				<section class="glass-card p-4">
+					<div class="table-responsive">
+						<table class="table align-middle admin-table mb-0">
+							<thead>
+								<tr>
+									<th>Cliente</th>
+									<th>Contato</th>
+									<th>Status</th>
+									<th class="text-end">Acoes</th>
+								</tr>
+							</thead>
+							<tbody>
+								<% if (!clients.length) { %>
+									<tr>
+										<td data-label="Cliente" colspan="4" class="text-secondary">Nenhum cliente cadastrado para a empresa selecionada.</td>
+									</tr>
+								<% } %>
+								<% clients.forEach((client) => { %>
+									<tr>
+										<td data-label="Cliente">
+											<div class="fw-semibold"><%= client.nome %></div>
+											<div class="small text-secondary"><%= client.id %></div>
+										</td>
+										<td data-label="Contato">
+											<div><%= client.telefone || 'Telefone nao informado' %></div>
+											<div class="small text-secondary"><%= client.email || 'E-mail nao informado' %></div>
+										</td>
+										<td data-label="Status"><span class="badge rounded-pill text-bg-light"><%= client.status || 'Ativo' %></span></td>
+										<td data-label="Acoes">
+											<div class="d-flex justify-content-end gap-2 flex-wrap">
+												<button type="button" class="btn btn-sm btn-outline-dark rounded-pill manage-client-button"
+													data-bs-toggle="modal"
+													data-bs-target="#manageClientModal"
+													data-client-id="<%= client.id %>"
+													data-client-name="<%- client.nome %>">
+													Gerenciar
+												</button>
+											</div>
+										</td>
+									</tr>
+								<% }) %>
+							</tbody>
+						</table>
+					</div>
+				</section>
+			</main>
+		</div>
+	</div>
+
+	<div class="modal fade" id="createClientModal" tabindex="-1" aria-labelledby="createClientModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content border-0 rounded-4">
+				<div class="modal-header border-0 pb-0">
+					<div>
+						<h2 class="modal-title h4 mb-1" id="createClientModalLabel">Novo cliente</h2>
+						<p class="text-secondary mb-0">Cadastre clientes manualmente no admin sem interferir no fluxo de agendamento autonomo.</p>
+					</div>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+				</div>
+				<div class="modal-body pt-4">
+					<div id="create-client-feedback" class="alert d-none rounded-4 border-0" role="alert"></div>
+					<form id="create-client-form" class="row g-3">
+						<div class="col-12 col-md-6">
+							<label class="form-label fw-semibold" for="new-client-name">Nome</label>
+							<input class="form-control admin-input" id="new-client-name" name="nome" required>
+						</div>
+						<div class="col-12 col-md-6">
+							<label class="form-label fw-semibold" for="new-client-phone">Telefone</label>
+							<input class="form-control admin-input" id="new-client-phone" name="telefone" required>
+						</div>
+						<div class="col-12 col-md-6">
+							<label class="form-label fw-semibold" for="new-client-email">E-mail</label>
+							<input type="email" class="form-control admin-input" id="new-client-email" name="email">
+						</div>
+						<div class="col-12 col-md-3">
+							<label class="form-label fw-semibold" for="new-client-age">Idade</label>
+							<input type="number" min="0" class="form-control admin-input" id="new-client-age" name="idade">
+						</div>
+						<div class="col-12 col-md-3">
+							<label class="form-label fw-semibold" for="new-client-status">Status</label>
+							<select class="form-select admin-input" id="new-client-status" name="status">
+								<option value="Ativo" selected>Ativo</option>
+								<option value="Inativo">Inativo</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<% if (isMaster) { %>
+								<label class="form-label fw-semibold" for="new-client-company">Empresa</label>
+								<select class="form-select admin-input" id="new-client-company" name="empresa_id" required>
+									<option value="">Selecione uma empresa ativa</option>
+									<% activeCompanies.forEach((company) => { %>
+										<option value="<%= company.id %>" <%= selectedCompanyId === company.id ? 'selected' : '' %>><%= company.nome %></option>
+									<% }) %>
+								</select>
+							<% } else { %>
+								<input type="hidden" name="empresa_id" id="new-client-company" value="<%= selectedCompanyId %>">
+							<% } %>
+						</div>
+						<div class="col-12 d-flex justify-content-end gap-2 pt-2">
+							<button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+							<button type="submit" class="btn btn-dark rounded-pill px-4">Criar cliente</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal fade" id="manageClientModal" tabindex="-1" aria-labelledby="manageClientModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-lg">
+			<div class="modal-content border-0 rounded-4">
+				<div class="modal-header border-0 pb-0">
+					<div>
+						<h2 class="modal-title h4 mb-1" id="manageClientModalLabel">Gerenciar cliente</h2>
+						<p class="text-secondary mb-0" id="manageClientSubtitle">Atualize os dados permitidos pela API FastAPI.</p>
+					</div>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+				</div>
+				<div class="modal-body pt-4">
+					<div id="manage-client-feedback" class="alert d-none rounded-4 border-0" role="alert"></div>
+					<form id="manage-client-form" class="row g-3">
+						<div class="col-12 col-md-6">
+							<label class="form-label fw-semibold" for="manage-client-name">Nome</label>
+							<input class="form-control admin-input" id="manage-client-name" name="nome" required>
+						</div>
+						<div class="col-12 col-md-6">
+							<label class="form-label fw-semibold" for="manage-client-phone">Telefone</label>
+							<input class="form-control admin-input" id="manage-client-phone" name="telefone" required>
+						</div>
+						<div class="col-12 col-md-6">
+							<label class="form-label fw-semibold" for="manage-client-email">E-mail</label>
+							<input type="email" class="form-control admin-input" id="manage-client-email" name="email">
+						</div>
+						<div class="col-12 col-md-3">
+							<label class="form-label fw-semibold" for="manage-client-age">Idade</label>
+							<input type="number" min="0" class="form-control admin-input" id="manage-client-age" name="idade">
+						</div>
+						<div class="col-12 col-md-3">
+							<label class="form-label fw-semibold" for="manage-client-status">Status</label>
+							<select class="form-select admin-input" id="manage-client-status" name="status">
+								<option value="Ativo">Ativo</option>
+								<option value="Inativo">Inativo</option>
+							</select>
+						</div>
+						<div class="col-12 d-flex justify-content-end gap-2 pt-2">
+							<button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+							<button type="submit" class="btn btn-dark rounded-pill px-4">Salvar alteracoes</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
+	<script>
+		(function () {
+			const page = document.getElementById('client-page');
+			if (!page) {
+				return;
+			}
+
+			const companyId = page.dataset.companyId || '';
+			const createClientForm = document.getElementById('create-client-form');
+			const createFeedback = document.getElementById('create-client-feedback');
+			const manageClientForm = document.getElementById('manage-client-form');
+			const manageFeedback = document.getElementById('manage-client-feedback');
+			const manageSubtitle = document.getElementById('manageClientSubtitle');
+
+			let selectedClientId = '';
+
+			function setFeedback(element, type, text) {
+				if (!element) {
+					return;
+				}
+
+				if (!text) {
+					element.className = 'alert d-none rounded-4 border-0';
+					element.textContent = '';
+					return;
+				}
+
+				element.className = `alert alert-${type} rounded-4 border-0`;
+				element.textContent = text;
+			}
+
+			function parseResponse(response) {
+				return response.text().then((text) => {
+					try {
+						return text ? JSON.parse(text) : {};
+					} catch (error) {
+						return { message: text || 'Resposta invalida da API.' };
+					}
+				});
+			}
+
+			if (createClientForm) {
+				createClientForm.addEventListener('submit', async (event) => {
+					event.preventDefault();
+					setFeedback(createFeedback, null, '');
+
+					const formData = new FormData(createClientForm);
+					const payload = {
+						nome: String(formData.get('nome') || '').trim(),
+						telefone: String(formData.get('telefone') || '').trim(),
+						email: String(formData.get('email') || '').trim(),
+						idade: formData.get('idade') === '' ? null : Number(formData.get('idade')),
+						status: String(formData.get('status') || 'Ativo').trim(),
+						empresa_id: String(formData.get('empresa_id') || companyId).trim(),
+					};
+
+					try {
+						const response = await fetch(page.dataset.createClientEndpoint, {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								Accept: 'application/json',
+							},
+							body: JSON.stringify(payload),
+						});
+						const result = await parseResponse(response);
+
+						if (!response.ok) {
+							throw new Error(result.message || 'Nao foi possivel criar o cliente.');
+						}
+
+						setFeedback(createFeedback, 'success', 'Cliente criado com sucesso.');
+						setTimeout(() => window.location.reload(), 450);
+					} catch (error) {
+						setFeedback(createFeedback, 'danger', error.message);
+					}
+				});
+			}
+
+			document.querySelectorAll('.manage-client-button').forEach((button) => {
+				button.addEventListener('click', async () => {
+					selectedClientId = button.dataset.clientId;
+					manageSubtitle.textContent = `${button.dataset.clientName} · Atualize os dados permitidos pela API FastAPI.`;
+					setFeedback(manageFeedback, null, '');
+
+					const endpointTemplate = page.dataset.clientDetailEndpointTemplate;
+					const endpoint = endpointTemplate.replace('__CLIENT_ID__', encodeURIComponent(selectedClientId));
+					const query = companyId ? `?empresa_id=${encodeURIComponent(companyId)}` : '';
+
+					try {
+						const response = await fetch(`${endpoint}${query}`, { headers: { Accept: 'application/json' } });
+						const result = await parseResponse(response);
+						if (!response.ok) {
+							throw new Error(result.message || 'Nao foi possivel carregar o cliente.');
+						}
+
+						manageClientForm.nome.value = result.nome || '';
+						manageClientForm.telefone.value = result.telefone || '';
+						manageClientForm.email.value = result.email || '';
+						manageClientForm.idade.value = typeof result.idade === 'number' ? result.idade : '';
+						manageClientForm.status.value = result.status || 'Ativo';
+					} catch (error) {
+						setFeedback(manageFeedback, 'danger', error.message);
+					}
+				});
+			});
+
+			if (manageClientForm) {
+				manageClientForm.addEventListener('submit', async (event) => {
+					event.preventDefault();
+					setFeedback(manageFeedback, null, '');
+
+					if (!selectedClientId) {
+						setFeedback(manageFeedback, 'warning', 'Selecione um cliente para gerenciar.');
+						return;
+					}
+
+					const formData = new FormData(manageClientForm);
+					const payload = {
+						nome: String(formData.get('nome') || '').trim(),
+						telefone: String(formData.get('telefone') || '').trim(),
+						email: String(formData.get('email') || '').trim(),
+						idade: formData.get('idade') === '' ? null : Number(formData.get('idade')),
+						status: String(formData.get('status') || 'Ativo').trim(),
+						empresa_id: companyId,
+					};
+
+					const endpointTemplate = page.dataset.clientDetailEndpointTemplate;
+					const endpoint = endpointTemplate.replace('__CLIENT_ID__', encodeURIComponent(selectedClientId));
+
+					try {
+						const response = await fetch(endpoint, {
+							method: 'PATCH',
+							headers: {
+								'Content-Type': 'application/json',
+								Accept: 'application/json',
+							},
+							body: JSON.stringify(payload),
+						});
+						const result = await parseResponse(response);
+						if (!response.ok) {
+							throw new Error(result.message || 'Nao foi possivel atualizar o cliente.');
+						}
+
+						setFeedback(manageFeedback, 'success', 'Cliente atualizado com sucesso.');
+						setTimeout(() => window.location.reload(), 450);
+					} catch (error) {
+						setFeedback(manageFeedback, 'danger', error.message);
+					}
+				});
+			}
+		})();
+	</script>
+</body>
+</html>

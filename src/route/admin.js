@@ -2,7 +2,9 @@ const express = require('express');
 
 const adminAuth = require('../service/adminAuth');
 const adminCategories = require('../service/adminCategories');
+const adminClientes = require('../service/adminClientes');
 const adminCompanies = require('../service/adminCompanies');
+const adminProfessionals = require('../service/adminProfessionals');
 const adminServices = require('../service/adminServices');
 const adminUsers = require('../service/adminUsers');
 
@@ -24,7 +26,7 @@ function ensureAuthenticated(req, res, next) {
 	return res.redirect('/admin/login');
 }
 
-function ensureRoles(roles, permissionMessage = 'Voce nao tem permissao para acessar este modulo.') {
+function ensureRoles(roles, permissionMessage = 'Voce nao tem permissão para acessar este modulo.') {
 	return (req, res, next) => {
 		if (!req.session.adminUser) {
 			return res.redirect('/admin/login');
@@ -82,6 +84,25 @@ function buildServiceForm(data = {}) {
 	};
 }
 
+function buildProfessionalForm(data = {}) {
+	return {
+		nome: data.nome || '',
+		ativo: typeof data.ativo === 'boolean' ? data.ativo : true,
+		empresa_id: data.empresa_id || '',
+	};
+}
+
+function buildClientForm(data = {}) {
+	return {
+		nome: data.nome || '',
+		telefone: data.telefone || '',
+		email: data.email || '',
+		idade: typeof data.idade === 'number' ? data.idade : data.idade || '',
+		status: String(data.status || 'Ativo').trim() || 'Ativo',
+		empresa_id: data.empresa_id || '',
+	};
+}
+
 function currentAdminCompanyId(req) {
 	return String(req.session.adminUser?.empresa || '').trim();
 }
@@ -100,6 +121,72 @@ async function resolveServiceContext(req, preferredCompanyId) {
 		companyId,
 		categories,
 	};
+}
+
+async function resolveProfessionalContext(req, preferredCompanyId) {
+	const role = req.session.adminUser.role;
+	const token = req.session.adminUser.token;
+	const activeCompanies = role === 'master' ? await adminCompanies.listActiveCompanies(token) : [];
+	const companyId = role === 'master'
+		? String(preferredCompanyId || '').trim() || (activeCompanies[0] ? activeCompanies[0].id : '')
+		: currentAdminCompanyId(req);
+	const professionals = companyId ? await adminProfessionals.listProfessionalsByCompany(token, companyId) : [];
+
+	return {
+		activeCompanies,
+		companyId,
+		professionals,
+	};
+}
+
+async function resolveClientContext(req, preferredCompanyId) {
+	const role = req.session.adminUser.role;
+	const token = req.session.adminUser.token;
+	const activeCompanies = role === 'master' ? await adminCompanies.listActiveCompanies(token) : [];
+	const companyId = role === 'master'
+		? String(preferredCompanyId || '').trim() || (activeCompanies[0] ? activeCompanies[0].id : '')
+		: currentAdminCompanyId(req);
+	const clients = await adminClientes.listClientesByCompany(token, companyId);
+
+	return {
+		activeCompanies,
+		companyId,
+		clients,
+	};
+}
+
+async function assertProfessionalAccess(req, professionalId, companyId) {
+	if (!companyId || !professionalId) {
+		return false;
+	}
+
+	const professionals = await adminProfessionals.listProfessionalsByCompany(req.session.adminUser.token, companyId);
+	return professionals.some((professional) => professional.id === professionalId);
+}
+
+async function assertClientAccess(req, clientId, companyId) {
+	if (!clientId) {
+		return false;
+	}
+
+	try {
+		const client = await adminClientes.getClienteById(req.session.adminUser.token, clientId);
+		if (!client || !client.id) {
+			return false;
+		}
+
+		if (req.session.adminUser.role !== 'master') {
+			return client.empresa_id === currentAdminCompanyId(req);
+		}
+
+		if (companyId) {
+			return client.empresa_id === companyId;
+		}
+
+		return true;
+	} catch (error) {
+		return false;
+	}
 }
 
 function parseBoolean(value, fallback = true) {
@@ -579,6 +666,287 @@ router.post('/admin/servicos', ensureRoles(['master', 'admin'], 'Voce nao tem pe
 			selectedCompanyId: serviceContext.companyId,
 			isMaster: req.session.adminUser.role === 'master',
 		});
+	}
+});
+
+router.get('/admin/profissionais', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para acessar profissionais e configuracoes.'), async (req, res) => {
+	try {
+		const professionalContext = await resolveProfessionalContext(req, req.query.empresa_id);
+		const companiesById = new Map(professionalContext.activeCompanies.map((company) => [company.id, company]));
+
+		return res.render('backoffice/profissionais/index', {
+			title: 'Profissionais',
+			page: 'profissionais-config',
+			currentAdmin: req.session.adminUser,
+			professionals: professionalContext.professionals,
+			activeCompanies: professionalContext.activeCompanies,
+			selectedCompanyId: professionalContext.companyId,
+			selectedCompanyName: companiesById.get(professionalContext.companyId)?.nome || professionalContext.companyId,
+			isMaster: req.session.adminUser.role === 'master',
+		});
+	} catch (error) {
+		req.session.flashMessage = {
+			type: 'danger',
+			text: 'Nao foi possivel carregar os profissionais.',
+		};
+		return res.redirect('/admin');
+	}
+});
+
+router.get('/admin/api/profissionais', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para consultar profissionais.'), async (req, res) => {
+	const preferredCompanyId = req.session.adminUser.role === 'master'
+		? String(req.query.empresa_id || '').trim()
+		: currentAdminCompanyId(req);
+
+	try {
+		const context = await resolveProfessionalContext(req, preferredCompanyId);
+		return res.json({
+			companyId: context.companyId,
+			professionals: context.professionals,
+		});
+	} catch (error) {
+		return res.status(500).json({ message: 'Nao foi possivel carregar os profissionais.' });
+	}
+});
+
+router.post('/admin/api/profissionais', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para criar profissionais.'), async (req, res) => {
+	const effectiveCompanyId = req.session.adminUser.role === 'master'
+		? String(req.body.empresa_id || '').trim()
+		: currentAdminCompanyId(req);
+	const professionalForm = buildProfessionalForm({
+		...req.body,
+		empresa_id: effectiveCompanyId,
+		ativo: parseBoolean(req.body.ativo, true),
+	});
+
+	if (!professionalForm.nome || !professionalForm.empresa_id) {
+		return res.status(422).json({ message: 'Informe nome e empresa para criar o profissional.' });
+	}
+
+	try {
+		const professional = await adminProfessionals.createProfessional(req.session.adminUser.token, professionalForm);
+		return res.status(201).json(professional);
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message });
+	}
+});
+
+router.get('/admin/api/profissionais/:id/escalas', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para consultar escalas.'), async (req, res) => {
+	const effectiveCompanyId = req.session.adminUser.role === 'master'
+		? String(req.query.empresa_id || '').trim()
+		: currentAdminCompanyId(req);
+
+	if (!effectiveCompanyId) {
+		return res.status(422).json({ message: 'Informe empresa para consultar escalas.' });
+	}
+
+	try {
+		const hasAccess = await assertProfessionalAccess(req, req.params.id, effectiveCompanyId);
+		if (!hasAccess) {
+			return res.status(403).json({ message: 'Voce nao pode acessar escalas deste profissional.' });
+		}
+
+		const scales = await adminProfessionals.listScalesByProfessional(req.session.adminUser.token, req.params.id);
+		return res.json(scales);
+	} catch (error) {
+		return res.status(500).json({ message: 'Nao foi possivel carregar as escalas.' });
+	}
+});
+
+router.post('/admin/api/profissionais/:id/escalas', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para cadastrar escalas.'), async (req, res) => {
+	const effectiveCompanyId = req.session.adminUser.role === 'master'
+		? String(req.body.empresa_id || '').trim()
+		: currentAdminCompanyId(req);
+	const diaSemana = Number(req.body.dia_semana);
+	const horaInicio = String(req.body.hora_inicio || '').trim();
+	const horaFim = String(req.body.hora_fim || '').trim();
+
+	if (!effectiveCompanyId) {
+		return res.status(422).json({ message: 'Informe empresa para cadastrar a escala.' });
+	}
+
+	if (!Number.isInteger(diaSemana) || diaSemana < 1 || diaSemana > 7 || !horaInicio || !horaFim) {
+		return res.status(422).json({ message: 'Informe dia da semana (1 a 7) e faixa de horario valida.' });
+	}
+
+	try {
+		const hasAccess = await assertProfessionalAccess(req, req.params.id, effectiveCompanyId);
+		if (!hasAccess) {
+			return res.status(403).json({ message: 'Voce nao pode cadastrar escala para este profissional.' });
+		}
+
+		const scale = await adminProfessionals.createScale(req.session.adminUser.token, {
+			profissional_id: req.params.id,
+			dia_semana: diaSemana,
+			hora_inicio: horaInicio,
+			hora_fim: horaFim,
+		});
+		return res.status(201).json(scale);
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message });
+	}
+});
+
+router.get('/admin/api/profissionais/:id/bloqueios', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para consultar bloqueios.'), async (req, res) => {
+	const effectiveCompanyId = req.session.adminUser.role === 'master'
+		? String(req.query.empresa_id || '').trim()
+		: currentAdminCompanyId(req);
+
+	if (!effectiveCompanyId) {
+		return res.status(422).json({ message: 'Informe empresa para consultar bloqueios.' });
+	}
+
+	try {
+		const hasAccess = await assertProfessionalAccess(req, req.params.id, effectiveCompanyId);
+		if (!hasAccess) {
+			return res.status(403).json({ message: 'Voce nao pode acessar bloqueios deste profissional.' });
+		}
+
+		const blocks = await adminProfessionals.listBlocksByProfessional(req.session.adminUser.token, req.params.id);
+		return res.json(blocks);
+	} catch (error) {
+		return res.status(500).json({ message: 'Nao foi possivel carregar os bloqueios.' });
+	}
+});
+
+router.post('/admin/api/profissionais/:id/bloqueios', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para cadastrar bloqueios.'), async (req, res) => {
+	const effectiveCompanyId = req.session.adminUser.role === 'master'
+		? String(req.body.empresa_id || '').trim()
+		: currentAdminCompanyId(req);
+	const data = String(req.body.data || '').trim();
+	const horaInicio = String(req.body.hora_inicio || '').trim();
+	const horaFim = String(req.body.hora_fim || '').trim();
+	const motivo = String(req.body.motivo || '').trim();
+
+	if (!effectiveCompanyId) {
+		return res.status(422).json({ message: 'Informe empresa para cadastrar o bloqueio.' });
+	}
+
+	if (!data || !horaInicio || !horaFim) {
+		return res.status(422).json({ message: 'Informe data, hora inicio e hora fim para o bloqueio.' });
+	}
+
+	try {
+		const hasAccess = await assertProfessionalAccess(req, req.params.id, effectiveCompanyId);
+		if (!hasAccess) {
+			return res.status(403).json({ message: 'Voce nao pode cadastrar bloqueio para este profissional.' });
+		}
+
+		const block = await adminProfessionals.createBlock(req.session.adminUser.token, {
+			profissional_id: req.params.id,
+			data,
+			hora_inicio: horaInicio,
+			hora_fim: horaFim,
+			motivo,
+		});
+		return res.status(201).json(block);
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message });
+	}
+});
+
+router.get('/admin/clientes', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para acessar o cadastro de clientes.'), async (req, res) => {
+	try {
+		const clientContext = await resolveClientContext(req, req.query.empresa_id);
+		const companiesById = new Map(clientContext.activeCompanies.map((company) => [company.id, company]));
+
+		return res.render('backoffice/clientes/index', {
+			title: 'Clientes',
+			page: 'clientes',
+			currentAdmin: req.session.adminUser,
+			clients: clientContext.clients,
+			activeCompanies: clientContext.activeCompanies,
+			selectedCompanyId: clientContext.companyId,
+			selectedCompanyName: companiesById.get(clientContext.companyId)?.nome || clientContext.companyId,
+			isMaster: req.session.adminUser.role === 'master',
+		});
+	} catch (error) {
+		req.session.flashMessage = {
+			type: 'danger',
+			text: 'Nao foi possivel carregar os clientes.',
+		};
+		return res.redirect('/admin');
+	}
+});
+
+router.get('/admin/api/clientes', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para consultar clientes.'), async (req, res) => {
+	const preferredCompanyId = req.session.adminUser.role === 'master'
+		? String(req.query.empresa_id || '').trim()
+		: currentAdminCompanyId(req);
+
+	try {
+		const context = await resolveClientContext(req, preferredCompanyId);
+		return res.json({
+			companyId: context.companyId,
+			clients: context.clients,
+		});
+	} catch (error) {
+		return res.status(500).json({ message: 'Nao foi possivel carregar os clientes.' });
+	}
+});
+
+router.post('/admin/api/clientes', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para criar clientes.'), async (req, res) => {
+	const effectiveCompanyId = req.session.adminUser.role === 'master'
+		? String(req.body.empresa_id || '').trim()
+		: currentAdminCompanyId(req);
+	const clientForm = buildClientForm({
+		...req.body,
+		empresa_id: effectiveCompanyId,
+	});
+
+	if (!clientForm.nome || !clientForm.telefone || !clientForm.empresa_id) {
+		return res.status(422).json({ message: 'Informe nome, telefone e empresa para criar o cliente.' });
+	}
+
+	try {
+		const client = await adminClientes.createCliente(req.session.adminUser.token, clientForm);
+		return res.status(201).json(client);
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message });
+	}
+});
+
+router.get('/admin/api/clientes/:id', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para consultar cliente.'), async (req, res) => {
+	const effectiveCompanyId = req.session.adminUser.role === 'master'
+		? String(req.query.empresa_id || '').trim()
+		: currentAdminCompanyId(req);
+
+	try {
+		const hasAccess = await assertClientAccess(req, req.params.id, effectiveCompanyId);
+		if (!hasAccess) {
+			return res.status(403).json({ message: 'Voce nao pode acessar este cliente.' });
+		}
+
+		const client = await adminClientes.getClienteById(req.session.adminUser.token, req.params.id);
+		return res.json(client);
+	} catch (error) {
+		return res.status(500).json({ message: 'Nao foi possivel carregar o cliente.' });
+	}
+});
+
+router.patch('/admin/api/clientes/:id', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para atualizar cliente.'), async (req, res) => {
+	const effectiveCompanyId = req.session.adminUser.role === 'master'
+		? String(req.body.empresa_id || '').trim()
+		: currentAdminCompanyId(req);
+	const clientForm = buildClientForm({
+		...req.body,
+		empresa_id: effectiveCompanyId,
+	});
+
+	if (!clientForm.nome || !clientForm.telefone || !clientForm.empresa_id) {
+		return res.status(422).json({ message: 'Informe nome, telefone e empresa para atualizar o cliente.' });
+	}
+
+	try {
+		const hasAccess = await assertClientAccess(req, req.params.id, effectiveCompanyId);
+		if (!hasAccess) {
+			return res.status(403).json({ message: 'Voce nao pode atualizar este cliente.' });
+		}
+
+		const client = await adminClientes.updateCliente(req.session.adminUser.token, req.params.id, clientForm);
+		return res.json(client);
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message });
 	}
 });
 
