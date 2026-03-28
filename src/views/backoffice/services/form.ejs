@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title><%= title %> | Gendago</title>
+	<link rel="preconnect" href="https://cdn.jsdelivr.net">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+	<link rel="stylesheet" href="/styles/admin.css">
+</head>
+<body>
+	<div class="container-fluid backoffice-shell">
+		<div class="row min-vh-100">
+			<%- include('../partials/sidebar', { currentAdmin, page }) %>
+
+			<main class="col-12 col-lg-9 col-xl-10 content-wrap">
+				<section class="glass-card p-4 p-xl-5 mb-4">
+					<div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+						<div>
+							<p class="text-uppercase small fw-semibold text-secondary mb-2">Configuracoes</p>
+							<h1 class="display-6 fw-semibold mb-2">Novo servico</h1>
+							<p class="text-secondary mb-0">Cadastre um novo servico vinculando empresa e categoria corretas antes da publicacao no agendamento.</p>
+						</div>
+						<a href="/admin/servicos<%= selectedCompanyId ? `?empresa_id=${encodeURIComponent(selectedCompanyId)}` : '' %>" class="btn btn-outline-dark rounded-pill px-4">Voltar</a>
+					</div>
+				</section>
+
+				<% if (formError) { %>
+					<div class="alert alert-danger border-0 rounded-4 mb-4" role="alert"><%= formError %></div>
+				<% } %>
+
+				<section class="glass-card p-4 p-xl-5">
+					<form action="<%= formAction %>" method="post" class="row g-4" id="service-form" data-category-endpoint-template="/admin/api/empresas/__EMPRESA_ID__/categorias" data-category-create-endpoint="/admin/api/categorias" data-category-update-endpoint-template="/admin/api/categorias/__CATEGORY_ID__">
+						<div class="col-12 col-md-6">
+							<label class="form-label fw-semibold" for="nome">Nome</label>
+							<input class="form-control form-control-lg admin-input" id="nome" name="nome" value="<%= serviceForm.nome %>" required>
+						</div>
+						<div class="col-12 col-md-3">
+							<label class="form-label fw-semibold" for="preco">Preco</label>
+							<input type="number" step="0.01" min="0" class="form-control form-control-lg admin-input" id="preco" name="preco" value="<%= serviceForm.preco %>" required>
+						</div>
+						<div class="col-12 col-md-3">
+							<label class="form-label fw-semibold" for="duracao_minutos">Duracao</label>
+							<input type="number" min="1" class="form-control form-control-lg admin-input" id="duracao_minutos" name="duracao_minutos" value="<%= serviceForm.duracao_minutos %>" required>
+						</div>
+						<div class="col-12 col-md-6">
+							<label class="form-label fw-semibold" for="empresa_id">Empresa</label>
+							<% if (isMaster) { %>
+								<select class="form-select form-select-lg admin-input" id="empresa_id" name="empresa_id" required>
+									<option value="">Selecione uma empresa ativa</option>
+									<% activeCompanies.forEach((company) => { %>
+										<option value="<%= company.id %>" <%= selectedCompanyId === company.id ? 'selected' : '' %>><%= company.nome %></option>
+									<% }) %>
+								</select>
+								<div class="form-text">Somente empresas ativas aparecem para o perfil master.</div>
+							<% } else { %>
+								<input type="hidden" name="empresa_id" value="<%= selectedCompanyId %>">
+								<input class="form-control form-control-lg admin-input" value="<%= selectedCompanyId %>" readonly>
+								<div class="form-text">Como admin, os servicos ficam vinculados automaticamente a sua empresa.</div>
+							<% } %>
+						</div>
+						<div class="col-12 col-md-6">
+							<label class="form-label fw-semibold" for="categoria_id">Categoria</label>
+							<div class="d-flex gap-2 align-items-start">
+								<select class="form-select form-select-lg admin-input" id="categoria_id" name="categoria_id" required>
+									<option value="">Selecione uma categoria</option>
+									<% categories.forEach((category) => { %>
+										<option value="<%= category.id %>" <%= serviceForm.categoria_id === category.id ? 'selected' : '' %>><%= category.nome %></option>
+									<% }) %>
+								</select>
+								<button type="button" class="btn btn-outline-dark rounded-pill px-3 category-modal-button" id="open-category-modal" data-bs-toggle="modal" data-bs-target="#categoryModal">+</button>
+							</div>
+							<div class="d-flex justify-content-between align-items-center gap-2 form-text">
+								<span>As categorias sao carregadas conforme a empresa selecionada.</span>
+								<button type="button" class="btn btn-link btn-sm p-0 category-link-button" data-bs-toggle="modal" data-bs-target="#categoryModal">Adicionar categoria</button>
+							</div>
+						</div>
+						<div class="col-12 d-flex justify-content-end gap-2 pt-2">
+							<a href="/admin/servicos<%= selectedCompanyId ? `?empresa_id=${encodeURIComponent(selectedCompanyId)}` : '' %>" class="btn btn-outline-secondary rounded-pill px-4">Cancelar</a>
+							<button type="submit" class="btn btn-dark rounded-pill px-4">Criar servico</button>
+						</div>
+					</form>
+				</section>
+
+				<div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+					<div class="modal-dialog modal-lg modal-dialog-scrollable">
+						<div class="modal-content border-0 rounded-4">
+							<div class="modal-header border-0 pb-0">
+								<div>
+									<h2 class="modal-title h4 mb-1" id="categoryModalLabel">Gerenciar categorias</h2>
+									<p class="text-secondary mb-0">Crie uma categoria se ela nao existir e atualize nome ou status das categorias da empresa selecionada.</p>
+								</div>
+								<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+							</div>
+							<div class="modal-body pt-4">
+								<div id="category-modal-feedback" class="alert d-none rounded-4 border-0" role="alert"></div>
+								<form id="category-create-form" class="glass-card p-4 mb-4">
+									<div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+										<div>
+											<h3 class="h5 mb-1">Nova categoria</h3>
+											<p class="text-secondary mb-0">A nova categoria sera criada para a empresa escolhida no cadastro do servico.</p>
+										</div>
+										<span class="badge rounded-pill text-bg-light" id="category-company-badge"><%= selectedCompanyId || 'Sem empresa selecionada' %></span>
+									</div>
+									<div class="row g-3 align-items-end">
+										<div class="col-12 col-md-9">
+											<label class="form-label fw-semibold" for="new-category-name">Nome da categoria</label>
+											<input class="form-control admin-input" id="new-category-name" name="nome" required>
+										</div>
+										<div class="col-12 col-md-3 d-grid">
+											<button type="submit" class="btn btn-dark rounded-pill">Adicionar</button>
+										</div>
+									</div>
+								</form>
+
+								<div>
+									<div class="d-flex justify-content-between align-items-center gap-3 mb-3 flex-wrap">
+										<div>
+											<h3 class="h5 mb-1">Categorias da empresa</h3>
+											<p class="text-secondary mb-0">Edite nome e status sem sair do cadastro de servico.</p>
+										</div>
+										<button type="button" class="btn btn-outline-dark rounded-pill btn-sm" id="refresh-category-list">Atualizar lista</button>
+									</div>
+									<div class="category-manager-list" id="category-manager-list"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</main>
+		</div>
+	</div>
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
+	<script>
+		(function () {
+			const form = document.getElementById('service-form');
+			if (!form) {
+				return;
+			}
+
+			const companySelect = document.getElementById('empresa_id');
+			const categorySelect = document.getElementById('categoria_id');
+			const categoryModalElement = document.getElementById('categoryModal');
+			const openCategoryModalButton = document.getElementById('open-category-modal');
+			const categoryCreateForm = document.getElementById('category-create-form');
+			const categoryManagerList = document.getElementById('category-manager-list');
+			const categoryFeedback = document.getElementById('category-modal-feedback');
+			const categoryCompanyBadge = document.getElementById('category-company-badge');
+			const refreshCategoryListButton = document.getElementById('refresh-category-list');
+			const isMasterCompanySelect = companySelect && companySelect.tagName === 'SELECT';
+			const hiddenCompanyInput = form.querySelector('input[type="hidden"][name="empresa_id"]');
+
+			if (!categorySelect) {
+				return;
+			}
+
+			function getSelectedCompanyId() {
+				if (isMasterCompanySelect) {
+					return companySelect.value;
+				}
+
+				return hiddenCompanyInput ? hiddenCompanyInput.value : '';
+			}
+
+			function setFeedback(type, text) {
+				if (!categoryFeedback) {
+					return;
+				}
+
+				if (!text) {
+					categoryFeedback.className = 'alert d-none rounded-4 border-0';
+					categoryFeedback.textContent = '';
+					return;
+				}
+
+				categoryFeedback.className = `alert alert-${type} rounded-4 border-0`;
+				categoryFeedback.textContent = text;
+			}
+
+			function updateCompanyBadge() {
+				if (!categoryCompanyBadge) {
+					return;
+				}
+
+				const companyId = getSelectedCompanyId();
+				categoryCompanyBadge.textContent = companyId || 'Sem empresa selecionada';
+			}
+
+			function renderCategories(categories) {
+				const currentValue = categorySelect.value;
+				categorySelect.innerHTML = '<option value="">Selecione uma categoria</option>';
+				categories.forEach((category) => {
+					const option = document.createElement('option');
+					option.value = category.id;
+					option.textContent = category.nome;
+					if (currentValue === category.id) {
+						option.selected = true;
+					}
+					categorySelect.appendChild(option);
+				});
+			}
+
+			function renderCategoryManager(categories) {
+				if (!categoryManagerList) {
+					return;
+				}
+
+				if (!categories.length) {
+					categoryManagerList.innerHTML = '<div class="empty-category-state">Nenhuma categoria cadastrada para esta empresa.</div>';
+					return;
+				}
+
+				categoryManagerList.innerHTML = categories.map((category) => `
+					<form class="category-item-editor" data-category-id="${category.id}" data-category-company="${category.empresa_id}">
+						<div class="row g-3 align-items-end">
+							<div class="col-12 col-md-7">
+								<label class="form-label fw-semibold">Nome</label>
+								<input class="form-control admin-input" name="nome" value="${String(category.nome || '').replace(/"/g, '&quot;')}" required>
+							</div>
+							<div class="col-12 col-md-3">
+								<label class="form-label fw-semibold">Status</label>
+								<select class="form-select admin-input" name="ativo">
+									<option value="true" ${category.ativo ? 'selected' : ''}>Ativa</option>
+									<option value="false" ${!category.ativo ? 'selected' : ''}>Inativa</option>
+								</select>
+							</div>
+							<div class="col-12 col-md-2 d-grid">
+								<button type="submit" class="btn btn-outline-dark rounded-pill">Salvar</button>
+							</div>
+						</div>
+					</form>
+				`).join('');
+			}
+
+			async function fetchCategories(onlyActive) {
+				const companyId = getSelectedCompanyId();
+				if (!companyId) {
+					return [];
+				}
+
+				const endpoint = form.dataset.categoryEndpointTemplate.replace('__EMPRESA_ID__', encodeURIComponent(companyId));
+				const query = onlyActive === false ? '?onlyActive=false' : '';
+				const response = await fetch(`${endpoint}${query}`, { headers: { Accept: 'application/json' } });
+				if (!response.ok) {
+					throw new Error('Nao foi possivel carregar as categorias.');
+				}
+
+				return response.json();
+			}
+
+			async function loadCategories(companyId) {
+				renderCategories([]);
+				updateCompanyBadge();
+				if (!companyId) {
+					if (openCategoryModalButton) {
+						openCategoryModalButton.disabled = true;
+					}
+					return;
+				}
+
+				if (openCategoryModalButton) {
+					openCategoryModalButton.disabled = false;
+				}
+
+				try {
+					const categories = await fetchCategories(true);
+					renderCategories(categories);
+				} catch (error) {
+					console.error(error);
+				}
+			}
+
+			async function refreshCategoryManager() {
+				const companyId = getSelectedCompanyId();
+				updateCompanyBadge();
+				setFeedback(null, '');
+
+				if (!companyId) {
+					renderCategoryManager([]);
+					setFeedback('warning', 'Selecione uma empresa antes de gerenciar categorias.');
+					return;
+				}
+
+				try {
+					const categories = await fetchCategories(false);
+					renderCategoryManager(categories);
+				} catch (error) {
+					renderCategoryManager([]);
+					setFeedback('danger', error.message);
+				}
+			}
+
+			if (isMasterCompanySelect) {
+				companySelect.addEventListener('change', () => {
+					categorySelect.value = '';
+					loadCategories(companySelect.value);
+				});
+			}
+
+			if (categoryModalElement) {
+				categoryModalElement.addEventListener('show.bs.modal', refreshCategoryManager);
+			}
+
+			if (refreshCategoryListButton) {
+				refreshCategoryListButton.addEventListener('click', refreshCategoryManager);
+			}
+
+			if (categoryCreateForm) {
+				categoryCreateForm.addEventListener('submit', async (event) => {
+					event.preventDefault();
+					const companyId = getSelectedCompanyId();
+					const formData = new FormData(categoryCreateForm);
+					const payload = {
+						nome: String(formData.get('nome') || '').trim(),
+						empresa_id: companyId,
+					};
+
+					if (!companyId) {
+						setFeedback('warning', 'Selecione uma empresa antes de criar uma categoria.');
+						return;
+					}
+
+					try {
+						const response = await fetch(form.dataset.categoryCreateEndpoint, {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								Accept: 'application/json',
+							},
+							body: JSON.stringify(payload),
+						});
+						const result = await response.json();
+						if (!response.ok) {
+							throw new Error(result.message || 'Nao foi possivel criar a categoria.');
+						}
+
+						categoryCreateForm.reset();
+						setFeedback('success', 'Categoria criada com sucesso.');
+						await loadCategories(companyId);
+						await refreshCategoryManager();
+						if (result.id) {
+							categorySelect.value = result.id;
+						}
+					} catch (error) {
+						setFeedback('danger', error.message);
+					}
+				});
+			}
+
+			if (categoryManagerList) {
+				categoryManagerList.addEventListener('submit', async (event) => {
+					const editor = event.target.closest('.category-item-editor');
+					if (!editor) {
+						return;
+					}
+
+					event.preventDefault();
+					const categoryId = editor.dataset.categoryId;
+					const companyId = editor.dataset.categoryCompany;
+					const formData = new FormData(editor);
+					const payload = {
+						nome: String(formData.get('nome') || '').trim(),
+						ativo: formData.get('ativo') === 'true',
+						empresa_id: companyId,
+					};
+
+					try {
+						const endpoint = form.dataset.categoryUpdateEndpointTemplate.replace('__CATEGORY_ID__', encodeURIComponent(categoryId));
+						const response = await fetch(endpoint, {
+							method: 'PATCH',
+							headers: {
+								'Content-Type': 'application/json',
+								Accept: 'application/json',
+							},
+							body: JSON.stringify(payload),
+						});
+						const result = await response.json();
+						if (!response.ok) {
+							throw new Error(result.message || 'Nao foi possivel atualizar a categoria.');
+						}
+
+						setFeedback('success', 'Categoria atualizada com sucesso.');
+						await loadCategories(getSelectedCompanyId());
+						await refreshCategoryManager();
+						if (categorySelect.value === categoryId && !payload.ativo) {
+							categorySelect.value = '';
+						}
+					} catch (error) {
+						setFeedback('danger', error.message);
+					}
+				});
+			}
+
+			updateCompanyBadge();
+			if (!getSelectedCompanyId() && openCategoryModalButton) {
+				openCategoryModalButton.disabled = true;
+			}
+		})();
+	</script>
+</body>
+</html>

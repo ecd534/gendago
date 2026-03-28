@@ -1,0 +1,48 @@
+<%
+	const menuItems = [
+		{ key: 'dashboard', label: 'Dashboard', href: '/admin' },
+		{ key: 'usuarios', label: 'Usuarios e Perfis', href: '/admin/usuarios' },
+		{ key: 'servicos-categorias', label: 'Serviços e Categorias', href: '/admin/servicos' },
+		{ key: 'profissionais-config', label: 'Profissionais + Config', href: '#' },
+		{ key: 'empresas', label: 'Empresas', href: '/admin/empresas' },
+        { key: 'clientes', label: 'Clientes', href: '/admin/clientes' },
+		{ key: 'financeiro', label: 'Financeiro', href: '#' },
+		{ key: 'agendamentos', label: 'Gerenciar Agendamentos', href: '#' },
+		{ key: 'relatorios', label: 'Relatorios', href: '#' },
+	];
+%>
+
+<aside class="col-12 col-lg-3 col-xl-2 sidebar p-4">
+	<div class="d-flex align-items-center justify-content-between gap-3 mb-4 sidebar-topbar">
+		<div class="d-flex align-items-center gap-3">
+			<div class="brand-mark">G</div>
+			<div>
+				<div class="fw-semibold">Gendago</div>
+				<div class="small text-secondary">Painel Administrador</div>
+			</div>
+		</div>
+		<button class="btn btn-outline-dark btn-sm rounded-pill d-lg-none sidebar-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#admin-sidebar-content" aria-expanded="false" aria-controls="admin-sidebar-content">
+			Menu
+		</button>
+	</div>
+
+	<div class="collapse d-lg-block" id="admin-sidebar-content">
+		<div class="small text-uppercase text-secondary fw-semibold mb-2">Navegacao</div>
+		<nav class="nav nav-pills flex-column gap-2 mb-4">
+			<% menuItems.forEach((item) => { %>
+				<a class="nav-link <%= page === item.key ? 'active' : '' %>" href="<%= item.href %>"><%= item.label %></a>
+			<% }) %>
+		</nav>
+
+		<div class="glass-card p-3 mb-4 sidebar-session-card">
+			<div class="small text-uppercase text-secondary fw-semibold mb-1">Sessao atual</div>
+			<div class="fw-semibold"><%= currentAdmin ? currentAdmin.name : 'Administrador' %></div>
+			<div class="small text-secondary text-capitalize"><%= currentAdmin ? currentAdmin.empresa : 'sem Empresa' %></div>
+			<div class="small text-secondary text-capitalize"><%= currentAdmin ? currentAdmin.role : 'sem perfil' %></div>
+			<div class="small text-secondary"><%= currentAdmin ? currentAdmin.email : '' %></div>
+			<form action="/admin/logout" method="post" class="mt-3">
+				<button type="submit" class="btn btn-outline-dark btn-sm rounded-pill w-100">Sair</button>
+			</form>
+		</div>
+	</div>
+</aside>

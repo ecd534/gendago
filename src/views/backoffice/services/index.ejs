@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title><%= title %> | Gendago</title>
+	<link rel="preconnect" href="https://cdn.jsdelivr.net">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+	<link rel="stylesheet" href="/styles/admin.css">
+</head>
+<body>
+	<div class="container-fluid backoffice-shell">
+		<div class="row min-vh-100">
+			<%- include('../partials/sidebar', { currentAdmin, page }) %>
+
+			<main class="col-12 col-lg-9 col-xl-10 content-wrap">
+				<section class="glass-card p-4 p-xl-5 mb-4">
+					<div class="d-flex flex-column flex-xl-row justify-content-between gap-3 align-items-xl-center">
+						<div>
+							<p class="text-uppercase small fw-semibold text-secondary mb-2">Configuracoes</p>
+							<h1 class="display-6 fw-semibold mb-2">Servicos</h1>
+							<p class="text-secondary mb-0">Gerencie o catalogo de servicos que o cliente pode selecionar no agendamento.</p>
+						</div>
+						<div class="d-flex flex-column flex-md-row gap-2 align-items-md-center">
+							<% if (isMaster) { %>
+								<form action="/admin/servicos" method="get" class="d-flex gap-2 align-items-center flex-wrap">
+									<select class="form-select admin-input" name="empresa_id" onchange="this.form.submit()">
+										<% activeCompanies.forEach((company) => { %>
+											<option value="<%= company.id %>" <%= selectedCompanyId === company.id ? 'selected' : '' %>><%= company.nome %></option>
+										<% }) %>
+									</select>
+								</form>
+							<% } else { %>
+								<span class="badge rounded-pill text-bg-light px-3 py-2"><%= selectedCompanyName || 'Empresa nao vinculada' %></span>
+							<% } %>
+							<a href="/admin/servicos/novo<%= selectedCompanyId ? `?empresa_id=${encodeURIComponent(selectedCompanyId)}` : '' %>" class="btn btn-dark rounded-pill px-4">Novo servico</a>
+						</div>
+					</div>
+				</section>
+
+				<% if (flashMessage) { %>
+					<div class="alert alert-<%= flashMessage.type %> border-0 rounded-4 mb-4" role="alert"><%= flashMessage.text %></div>
+				<% } %>
+
+				<section class="glass-card p-4">
+					<div class="table-responsive">
+						<table class="table align-middle admin-table mb-0">
+							<thead>
+								<tr>
+									<th>Servico</th>
+									<th>Categoria</th>
+									<th>Preco</th>
+									<th>Duracao</th>
+								</tr>
+							</thead>
+							<tbody>
+								<% if (!services.length) { %>
+									<tr>
+										<td data-label="Servico" colspan="4" class="text-secondary">Nenhum servico encontrado para a empresa selecionada.</td>
+									</tr>
+								<% } %>
+								<% services.forEach((service) => { %>
+									<tr>
+										<td data-label="Servico">
+											<div class="fw-semibold"><%= service.nome %></div>
+											<div class="small text-secondary"><%= service.id %></div>
+										</td>
+										<td data-label="Categoria"><%= service.categoria_nome %></td>
+										<td data-label="Preco">R$ <%= Number(service.preco || 0).toFixed(2).replace('.', ',') %></td>
+										<td data-label="Duracao"><%= service.duracao_minutos %> min</td>
+									</tr>
+								<% }) %>
+							</tbody>
+						</table>
+					</div>
+				</section>
+			</main>
+		</div>
+	</div>
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
+</body>
+</html>
