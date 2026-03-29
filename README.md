@@ -49,18 +49,24 @@ npm install
 ```
 
 ## Variáveis de ambiente
-O projeto usa valores default, mas o ideal é configurar via `.env`:
+Copie o exemplo e preencha os valores locais:
+
+```bash
+cp .env.example .env
+```
+
+Variáveis da aplicação:
 
 - `PORT` (default: `3000`)
 - `SESSION_SECRET` (default de desenvolvimento em `src/app.js`)
 - `NODE_ENV` (`development` ou `production`)
 
-Banco de dados (`src/backend/db/pool.js`):
+Banco de dados (`src/config/database.js`):
 - `DB_HOST` (default: `localhost`)
 - `DB_PORT` (default: `5432`)
 - `DB_NAME` (default: `postgres`)
-- `DB_USER` (default: `postgres`)
-- `DB_PASSWORD` (default: `1234`)
+- `DB_USER` (**obrigatória em produção**; fallback local: `postgres`)
+- `DB_PASSWORD` (**obrigatória em produção**; fallback local: `1234`)
 - `DB_SSLMODE` (`require` para SSL)
 
 ## Executando

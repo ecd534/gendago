@@ -1,4 +1,5 @@
 const express = require('express')
+require('dotenv').config();
 const session = require('express-session');
 const adminRoute = require('./route/admin');
 const categoriaRoute = require('./route/categoria');
