@@ -36,7 +36,7 @@
 									</select>
 								</form>
 							<% } else { %>
-								<span class="badge rounded-pill text-bg-light px-3 py-2"><%= selectedCompanyName || 'Empresa nao vinculada' %></span>
+								<span class="badge rounded-pill text-bg-light px-3 py-2 company-name-badge"><%= selectedCompanyName || 'Empresa nao vinculada' %></span>
 							<% } %>
 							<button type="button" class="btn btn-dark rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createProfessionalModal">Novo profissional</button>
 						</div>
@@ -73,7 +73,7 @@
 										<td data-label="Status">
 											<span class="badge rounded-pill <%= professional.ativo ? 'badge-status-active' : 'badge-status-inactive' %>"><%= professional.ativo ? 'Ativo' : 'Inativo' %></span>
 										</td>
-										<td data-label="Empresa"><%= selectedCompanyName || professional.empresa_id %></td>
+										<td data-label="Empresa" class="company-name-text"><%= selectedCompanyName || 'Empresa nao vinculada' %></td>
 										<td data-label="Acoes">
 											<div class="d-flex justify-content-end gap-2 flex-wrap">
 												<button type="button" class="btn btn-sm btn-outline-dark rounded-pill manage-professional-button"
@@ -130,7 +130,7 @@
 								</select>
 							<% } else { %>
 								<input type="hidden" name="empresa_id" id="new-professional-company" value="<%= selectedCompanyId %>">
-								<input class="form-control admin-input" value="<%= selectedCompanyName || selectedCompanyId %>" readonly>
+								<input class="form-control admin-input company-name-input" value="<%= selectedCompanyName || selectedCompanyId %>" readonly>
 							<% } %>
 						</div>
 						<div class="col-12 d-flex justify-content-end gap-2 pt-2">

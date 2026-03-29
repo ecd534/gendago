@@ -5,6 +5,7 @@ const adminAgendamentos = require('../service/adminAgendamentos');
 const adminCategories = require('../service/adminCategories');
 const adminClientes = require('../service/adminClientes');
 const adminCompanies = require('../service/adminCompanies');
+const adminPermissions = require('../service/adminPermissions');
 const adminProfessionals = require('../service/adminProfessionals');
 const adminServices = require('../service/adminServices');
 const adminUsers = require('../service/adminUsers');
@@ -15,6 +16,8 @@ router.use((req, res, next) => {
 	if (req.path === '/Admin') {
 		return res.redirect('/admin');
 	}
+
+	res.locals.sidebarMenuItems = adminPermissions.getSidebarMenuByRole(req.session?.adminUser?.role);
 
 	return next();
 });
@@ -106,6 +109,52 @@ function buildClientForm(data = {}) {
 
 function currentAdminCompanyId(req) {
 	return String(req.session.adminUser?.empresa || '').trim();
+}
+
+function resolveCompanyName(companyById, companyId, fallback = 'Empresa nao vinculada') {
+	const normalizedCompanyId = String(companyId || '').trim();
+	if (!normalizedCompanyId) {
+		return 'Global';
+	}
+
+	return companyById.get(normalizedCompanyId)?.nome || fallback;
+}
+
+function resolveSessionCompanyName(req, companyById, companyId, fallback = 'Empresa nao vinculada') {
+	return resolveCompanyName(
+		companyById,
+		companyId,
+		req.session.adminUser?.empresa_nome || fallback,
+	);
+}
+
+async function resolveCompaniesDirectory(token) {
+	const companies = await adminCompanies.listCompanies(token);
+	const companyById = new Map(companies.map((company) => [company.id, company]));
+
+	return {
+		companies,
+		companyById,
+	};
+}
+
+async function resolveUserFormContext(req, preferredCompanyId) {
+	const role = req.session.adminUser.role;
+	const token = req.session.adminUser.token;
+	const directory = await resolveCompaniesDirectory(token);
+	const isMaster = role === 'master';
+	const selectedCompanyId = isMaster
+		? String(preferredCompanyId || '').trim()
+		: currentAdminCompanyId(req);
+	const selectedCompanyName = resolveCompanyName(directory.companyById, selectedCompanyId, req.session.adminUser.empresa_nome || 'Empresa nao vinculada');
+
+	return {
+		activeCompanies: directory.companies,
+		selectedCompanyId,
+		selectedCompanyName,
+		isMaster,
+		companyById: directory.companyById,
+	};
 }
 
 async function resolveServiceContext(req, preferredCompanyId) {
@@ -260,6 +309,17 @@ router.post('/admin/login', async (req, res) => {
 		});
 	}
 
+	if (authenticatedUser.empresa && authenticatedUser.token) {
+		try {
+			const company = await adminCompanies.getCompanyById(authenticatedUser.token, authenticatedUser.empresa);
+			authenticatedUser.empresa_nome = company?.nome || authenticatedUser.empresa;
+		} catch (error) {
+			authenticatedUser.empresa_nome = authenticatedUser.empresa;
+		}
+	} else {
+		authenticatedUser.empresa_nome = 'Global';
+	}
+
 	req.session.adminUser = authenticatedUser;
 	return req.session.save((error) => {
 		if (error) {
@@ -293,15 +353,20 @@ router.get('/admin', ensureAuthenticated, (req, res) => {
 	});
 });
 
-router.get('/admin/usuarios', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para acessar o cadastro de usuarios.'), async (req, res) => {
+router.get('/admin/usuarios', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para acessar o cadastro de usuarios.'), async (req, res) => {
 	try {
 		const users = await adminUsers.listUsers(req.session.adminUser.token);
+		const directory = await resolveCompaniesDirectory(req.session.adminUser.token);
+		const decoratedUsers = users.map((user) => ({
+			...user,
+			empresa_nome: resolveCompanyName(directory.companyById, user.empresa_id),
+		}));
 
 		return res.render('backoffice/users/index', {
 			title: 'Usuarios',
 			page: 'usuarios',
 			currentAdmin: req.session.adminUser,
-			users,
+			users: decoratedUsers,
 		});
 	} catch (error) {
 		req.session.flashMessage = {
@@ -312,7 +377,14 @@ router.get('/admin/usuarios', ensureRoles(['master', 'admin'], 'Voce nao tem per
 	}
 });
 
-router.get('/admin/usuarios/novo', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para acessar o cadastro de usuarios.'), (req, res) => {
+router.get('/admin/usuarios/novo', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para acessar o cadastro de usuarios.'), async (req, res) => {
+	const userForm = buildUserForm();
+	if (req.session.adminUser.role !== 'master') {
+		userForm.empresa_id = currentAdminCompanyId(req);
+	}
+
+	const userContext = await resolveUserFormContext(req, userForm.empresa_id);
+
 	return res.render('backoffice/users/form', {
 		title: 'Novo usuario',
 		page: 'usuarios',
@@ -320,16 +392,24 @@ router.get('/admin/usuarios/novo', ensureRoles(['master', 'admin'], 'Voce nao te
 		formMode: 'create',
 		formAction: '/admin/usuarios',
 		formError: null,
-		userForm: buildUserForm(),
+		userForm,
 		levelOptions: getAllowedLevels(req.session.adminUser.role),
+		activeCompanies: userContext.activeCompanies,
+		selectedCompanyId: userContext.selectedCompanyId,
+		selectedCompanyName: userContext.selectedCompanyName,
+		isMaster: userContext.isMaster,
 	});
 });
 
-router.post('/admin/usuarios', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para acessar o cadastro de usuarios.'), async (req, res) => {
+router.post('/admin/usuarios', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para acessar o cadastro de usuarios.'), async (req, res) => {
 	const userForm = buildUserForm({
 		...req.body,
 		ativo: parseBoolean(req.body.ativo, true),
 	});
+	if (req.session.adminUser.role !== 'master') {
+		userForm.empresa_id = currentAdminCompanyId(req);
+	}
+	const userContext = await resolveUserFormContext(req, userForm.empresa_id);
 
 	if (!userForm.nome || !userForm.email || !userForm.nivel || userForm.senha.length < 6) {
 		return res.status(422).render('backoffice/users/form', {
@@ -341,6 +421,10 @@ router.post('/admin/usuarios', ensureRoles(['master', 'admin'], 'Voce nao tem pe
 			formError: 'Preencha nome, email, nivel e uma senha com no minimo 6 caracteres.',
 			userForm,
 			levelOptions: getAllowedLevels(req.session.adminUser.role),
+			activeCompanies: userContext.activeCompanies,
+			selectedCompanyId: userContext.selectedCompanyId,
+			selectedCompanyName: userContext.selectedCompanyName,
+			isMaster: userContext.isMaster,
 		});
 	}
 
@@ -354,6 +438,10 @@ router.post('/admin/usuarios', ensureRoles(['master', 'admin'], 'Voce nao tem pe
 			formError: 'Voce nao pode criar usuarios com esse nivel.',
 			userForm,
 			levelOptions: getAllowedLevels(req.session.adminUser.role),
+			activeCompanies: userContext.activeCompanies,
+			selectedCompanyId: userContext.selectedCompanyId,
+			selectedCompanyName: userContext.selectedCompanyName,
+			isMaster: userContext.isMaster,
 		});
 	}
 
@@ -374,11 +462,15 @@ router.post('/admin/usuarios', ensureRoles(['master', 'admin'], 'Voce nao tem pe
 			formError: error.message,
 			userForm,
 			levelOptions: getAllowedLevels(req.session.adminUser.role),
+			activeCompanies: userContext.activeCompanies,
+			selectedCompanyId: userContext.selectedCompanyId,
+			selectedCompanyName: userContext.selectedCompanyName,
+			isMaster: userContext.isMaster,
 		});
 	}
 });
 
-router.get('/admin/usuarios/:id/editar', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para acessar o cadastro de usuarios.'), async (req, res) => {
+router.get('/admin/usuarios/:id/editar', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para acessar o cadastro de usuarios.'), async (req, res) => {
 	try {
 		const user = await adminUsers.getUserById(req.session.adminUser.token, req.params.id);
 
@@ -399,6 +491,7 @@ router.get('/admin/usuarios/:id/editar', ensureRoles(['master', 'admin'], 'Voce 
 			formError: null,
 			userForm: buildUserForm(user),
 			levelOptions: getAllowedLevels(req.session.adminUser.role),
+			...(await resolveUserFormContext(req, user.empresa_id)),
 		});
 	} catch (error) {
 		req.session.flashMessage = {
@@ -409,11 +502,15 @@ router.get('/admin/usuarios/:id/editar', ensureRoles(['master', 'admin'], 'Voce 
 	}
 });
 
-router.post('/admin/usuarios/:id', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para acessar o cadastro de usuarios.'), async (req, res) => {
+router.post('/admin/usuarios/:id', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para acessar o cadastro de usuarios.'), async (req, res) => {
 	const userForm = buildUserForm({
 		...req.body,
 		ativo: parseBoolean(req.body.ativo, true),
 	});
+	if (req.session.adminUser.role !== 'master') {
+		userForm.empresa_id = currentAdminCompanyId(req);
+	}
+	const userContext = await resolveUserFormContext(req, userForm.empresa_id);
 
 	if (!userForm.nome || !userForm.email || !userForm.nivel) {
 		return res.status(422).render('backoffice/users/form', {
@@ -425,6 +522,10 @@ router.post('/admin/usuarios/:id', ensureRoles(['master', 'admin'], 'Voce nao te
 			formError: 'Preencha nome, email e nivel para continuar.',
 			userForm,
 			levelOptions: getAllowedLevels(req.session.adminUser.role),
+			activeCompanies: userContext.activeCompanies,
+			selectedCompanyId: userContext.selectedCompanyId,
+			selectedCompanyName: userContext.selectedCompanyName,
+			isMaster: userContext.isMaster,
 		});
 	}
 
@@ -438,6 +539,10 @@ router.post('/admin/usuarios/:id', ensureRoles(['master', 'admin'], 'Voce nao te
 			formError: 'Quando informada, a senha deve ter no minimo 6 caracteres.',
 			userForm,
 			levelOptions: getAllowedLevels(req.session.adminUser.role),
+			activeCompanies: userContext.activeCompanies,
+			selectedCompanyId: userContext.selectedCompanyId,
+			selectedCompanyName: userContext.selectedCompanyName,
+			isMaster: userContext.isMaster,
 		});
 	}
 
@@ -451,6 +556,10 @@ router.post('/admin/usuarios/:id', ensureRoles(['master', 'admin'], 'Voce nao te
 			formError: 'Voce nao pode atribuir esse nivel.',
 			userForm,
 			levelOptions: getAllowedLevels(req.session.adminUser.role),
+			activeCompanies: userContext.activeCompanies,
+			selectedCompanyId: userContext.selectedCompanyId,
+			selectedCompanyName: userContext.selectedCompanyName,
+			isMaster: userContext.isMaster,
 		});
 	}
 
@@ -471,11 +580,15 @@ router.post('/admin/usuarios/:id', ensureRoles(['master', 'admin'], 'Voce nao te
 			formError: error.message,
 			userForm,
 			levelOptions: getAllowedLevels(req.session.adminUser.role),
+			activeCompanies: userContext.activeCompanies,
+			selectedCompanyId: userContext.selectedCompanyId,
+			selectedCompanyName: userContext.selectedCompanyName,
+			isMaster: userContext.isMaster,
 		});
 	}
 });
 
-router.post('/admin/usuarios/:id/status', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para acessar o cadastro de usuarios.'), async (req, res) => {
+router.post('/admin/usuarios/:id/status', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para acessar o cadastro de usuarios.'), async (req, res) => {
 	const active = parseBoolean(req.body.ativo, false);
 
 	try {
@@ -494,7 +607,7 @@ router.post('/admin/usuarios/:id/status', ensureRoles(['master', 'admin'], 'Voce
 	return res.redirect('/admin/usuarios');
 });
 
-router.get('/admin/api/empresas/:empresaId/categorias', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para acessar categorias.'), async (req, res) => {
+router.get('/admin/api/empresas/:empresaId/categorias', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para acessar categorias.'), async (req, res) => {
 	const requestedCompanyId = String(req.params.empresaId || '').trim();
 	const currentCompanyId = currentAdminCompanyId(req);
 	const onlyActive = req.query.onlyActive !== 'false';
@@ -511,7 +624,7 @@ router.get('/admin/api/empresas/:empresaId/categorias', ensureRoles(['master', '
 	}
 });
 
-router.post('/admin/api/categorias', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para criar categorias.'), async (req, res) => {
+router.post('/admin/api/categorias', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para criar categorias.'), async (req, res) => {
 	const currentCompanyId = currentAdminCompanyId(req);
 	const companyId = req.session.adminUser.role === 'master'
 		? String(req.body.empresa_id || '').trim()
@@ -538,7 +651,7 @@ router.post('/admin/api/categorias', ensureRoles(['master', 'admin'], 'Voce nao 
 	}
 });
 
-router.patch('/admin/api/categorias/:id', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para atualizar categorias.'), async (req, res) => {
+router.patch('/admin/api/categorias/:id', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para atualizar categorias.'), async (req, res) => {
 	const currentCompanyId = currentAdminCompanyId(req);
 	const categoryCompanyId = req.session.adminUser.role === 'master'
 		? String(req.body.empresa_id || '').trim()
@@ -565,7 +678,7 @@ router.patch('/admin/api/categorias/:id', ensureRoles(['master', 'admin'], 'Voce
 	}
 });
 
-router.get('/admin/servicos', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para acessar o cadastro de servicos.'), async (req, res) => {
+router.get('/admin/servicos', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para acessar o cadastro de servicos.'), async (req, res) => {
 	try {
 		const serviceContext = await resolveServiceContext(req, req.query.empresa_id);
 		const services = serviceContext.companyId
@@ -576,7 +689,7 @@ router.get('/admin/servicos', ensureRoles(['master', 'admin'], 'Voce nao tem per
 		const decoratedServices = services.map((service) => ({
 			...service,
 			categoria_nome: categoryMap.get(service.categoria_id) || service.categoria_id,
-			empresa_nome: companiesById.get(service.empresa_id)?.nome || service.empresa_id,
+			empresa_nome: resolveSessionCompanyName(req, companiesById, service.empresa_id),
 		}));
 
 		return res.render('backoffice/services/index', {
@@ -586,7 +699,7 @@ router.get('/admin/servicos', ensureRoles(['master', 'admin'], 'Voce nao tem per
 			services: decoratedServices,
 			activeCompanies: serviceContext.activeCompanies,
 			selectedCompanyId: serviceContext.companyId,
-			selectedCompanyName: companiesById.get(serviceContext.companyId)?.nome || serviceContext.companyId,
+			selectedCompanyName: resolveSessionCompanyName(req, companiesById, serviceContext.companyId),
 			isMaster: req.session.adminUser.role === 'master',
 		});
 	} catch (error) {
@@ -598,7 +711,7 @@ router.get('/admin/servicos', ensureRoles(['master', 'admin'], 'Voce nao tem per
 	}
 });
 
-router.get('/admin/servicos/novo', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para acessar o cadastro de servicos.'), async (req, res) => {
+router.get('/admin/servicos/novo', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para acessar o cadastro de servicos.'), async (req, res) => {
 	try {
 		const serviceContext = await resolveServiceContext(req, req.query.empresa_id);
 		const companyForm = buildServiceForm({ empresa_id: serviceContext.companyId });
@@ -614,6 +727,7 @@ router.get('/admin/servicos/novo', ensureRoles(['master', 'admin'], 'Voce nao te
 			categories: serviceContext.categories,
 			activeCompanies: serviceContext.activeCompanies,
 			selectedCompanyId: serviceContext.companyId,
+			selectedCompanyName: serviceContext.activeCompanies.find((company) => company.id === serviceContext.companyId)?.nome || req.session.adminUser.empresa_nome || 'Empresa nao vinculada',
 			isMaster: req.session.adminUser.role === 'master',
 		});
 	} catch (error) {
@@ -625,7 +739,7 @@ router.get('/admin/servicos/novo', ensureRoles(['master', 'admin'], 'Voce nao te
 	}
 });
 
-router.post('/admin/servicos', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para acessar o cadastro de servicos.'), async (req, res) => {
+router.post('/admin/servicos', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para acessar o cadastro de servicos.'), async (req, res) => {
 	const effectiveCompanyId = req.session.adminUser.role === 'master'
 		? String(req.body.empresa_id || '').trim()
 		: currentAdminCompanyId(req);
@@ -686,7 +800,7 @@ router.post('/admin/servicos', ensureRoles(['master', 'admin'], 'Voce nao tem pe
 	}
 });
 
-router.get('/admin/profissionais', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para acessar profissionais e configuracoes.'), async (req, res) => {
+router.get('/admin/profissionais', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para acessar profissionais e configuracoes.'), async (req, res) => {
 	try {
 		const professionalContext = await resolveProfessionalContext(req, req.query.empresa_id);
 		const companiesById = new Map(professionalContext.activeCompanies.map((company) => [company.id, company]));
@@ -698,7 +812,7 @@ router.get('/admin/profissionais', ensureRoles(['master', 'admin'], 'Voce nao te
 			professionals: professionalContext.professionals,
 			activeCompanies: professionalContext.activeCompanies,
 			selectedCompanyId: professionalContext.companyId,
-			selectedCompanyName: companiesById.get(professionalContext.companyId)?.nome || professionalContext.companyId,
+			selectedCompanyName: resolveSessionCompanyName(req, companiesById, professionalContext.companyId),
 			isMaster: req.session.adminUser.role === 'master',
 		});
 	} catch (error) {
@@ -710,7 +824,7 @@ router.get('/admin/profissionais', ensureRoles(['master', 'admin'], 'Voce nao te
 	}
 });
 
-router.get('/admin/api/profissionais', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para consultar profissionais.'), async (req, res) => {
+router.get('/admin/api/profissionais', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para consultar profissionais.'), async (req, res) => {
 	const preferredCompanyId = req.session.adminUser.role === 'master'
 		? String(req.query.empresa_id || '').trim()
 		: currentAdminCompanyId(req);
@@ -726,7 +840,7 @@ router.get('/admin/api/profissionais', ensureRoles(['master', 'admin'], 'Voce na
 	}
 });
 
-router.post('/admin/api/profissionais', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para criar profissionais.'), async (req, res) => {
+router.post('/admin/api/profissionais', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para criar profissionais.'), async (req, res) => {
 	const effectiveCompanyId = req.session.adminUser.role === 'master'
 		? String(req.body.empresa_id || '').trim()
 		: currentAdminCompanyId(req);
@@ -748,7 +862,7 @@ router.post('/admin/api/profissionais', ensureRoles(['master', 'admin'], 'Voce n
 	}
 });
 
-router.get('/admin/api/profissionais/:id/escalas', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para consultar escalas.'), async (req, res) => {
+router.get('/admin/api/profissionais/:id/escalas', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para consultar escalas.'), async (req, res) => {
 	const effectiveCompanyId = req.session.adminUser.role === 'master'
 		? String(req.query.empresa_id || '').trim()
 		: currentAdminCompanyId(req);
@@ -770,7 +884,7 @@ router.get('/admin/api/profissionais/:id/escalas', ensureRoles(['master', 'admin
 	}
 });
 
-router.post('/admin/api/profissionais/:id/escalas', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para cadastrar escalas.'), async (req, res) => {
+router.post('/admin/api/profissionais/:id/escalas', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para cadastrar escalas.'), async (req, res) => {
 	const effectiveCompanyId = req.session.adminUser.role === 'master'
 		? String(req.body.empresa_id || '').trim()
 		: currentAdminCompanyId(req);
@@ -804,7 +918,7 @@ router.post('/admin/api/profissionais/:id/escalas', ensureRoles(['master', 'admi
 	}
 });
 
-router.get('/admin/api/profissionais/:id/bloqueios', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para consultar bloqueios.'), async (req, res) => {
+router.get('/admin/api/profissionais/:id/bloqueios', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para consultar bloqueios.'), async (req, res) => {
 	const effectiveCompanyId = req.session.adminUser.role === 'master'
 		? String(req.query.empresa_id || '').trim()
 		: currentAdminCompanyId(req);
@@ -826,7 +940,7 @@ router.get('/admin/api/profissionais/:id/bloqueios', ensureRoles(['master', 'adm
 	}
 });
 
-router.post('/admin/api/profissionais/:id/bloqueios', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para cadastrar bloqueios.'), async (req, res) => {
+router.post('/admin/api/profissionais/:id/bloqueios', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para cadastrar bloqueios.'), async (req, res) => {
 	const effectiveCompanyId = req.session.adminUser.role === 'master'
 		? String(req.body.empresa_id || '').trim()
 		: currentAdminCompanyId(req);
@@ -862,7 +976,7 @@ router.post('/admin/api/profissionais/:id/bloqueios', ensureRoles(['master', 'ad
 	}
 });
 
-router.get('/admin/clientes', ensureRoles(['master', 'admin', 'agente'], 'Voce nao tem permissao para acessar o cadastro de clientes.'), async (req, res) => {
+router.get('/admin/clientes', ensureRoles(adminPermissions.modules.masterAdminAgente, 'Voce nao tem permissao para acessar o cadastro de clientes.'), async (req, res) => {
 	try {
 		const clientContext = await resolveClientContext(req, req.query.empresa_id);
 		const companiesById = new Map(clientContext.activeCompanies.map((company) => [company.id, company]));
@@ -874,7 +988,7 @@ router.get('/admin/clientes', ensureRoles(['master', 'admin', 'agente'], 'Voce n
 			clients: clientContext.clients,
 			activeCompanies: clientContext.activeCompanies,
 			selectedCompanyId: clientContext.companyId,
-			selectedCompanyName: companiesById.get(clientContext.companyId)?.nome || clientContext.companyId,
+			selectedCompanyName: resolveSessionCompanyName(req, companiesById, clientContext.companyId),
 			isMaster: req.session.adminUser.role === 'master',
 		});
 	} catch (error) {
@@ -886,7 +1000,7 @@ router.get('/admin/clientes', ensureRoles(['master', 'admin', 'agente'], 'Voce n
 	}
 });
 
-router.get('/admin/api/clientes', ensureRoles(['master', 'admin', 'agente'], 'Voce nao tem permissao para consultar clientes.'), async (req, res) => {
+router.get('/admin/api/clientes', ensureRoles(adminPermissions.modules.masterAdminAgente, 'Voce nao tem permissao para consultar clientes.'), async (req, res) => {
 	const preferredCompanyId = req.session.adminUser.role === 'master'
 		? String(req.query.empresa_id || '').trim()
 		: currentAdminCompanyId(req);
@@ -902,7 +1016,7 @@ router.get('/admin/api/clientes', ensureRoles(['master', 'admin', 'agente'], 'Vo
 	}
 });
 
-router.post('/admin/api/clientes', ensureRoles(['master', 'admin'], 'Voce nao tem permissao para criar clientes.'), async (req, res) => {
+router.post('/admin/api/clientes', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para criar clientes.'), async (req, res) => {
 	const effectiveCompanyId = req.session.adminUser.role === 'master'
 		? String(req.body.empresa_id || '').trim()
 		: currentAdminCompanyId(req);
@@ -923,7 +1037,7 @@ router.post('/admin/api/clientes', ensureRoles(['master', 'admin'], 'Voce nao te
 	}
 });
 
-router.get('/admin/api/clientes/:id', ensureRoles(['master', 'admin', 'agente'], 'Voce nao tem permissao para consultar cliente.'), async (req, res) => {
+router.get('/admin/api/clientes/:id', ensureRoles(adminPermissions.modules.masterAdminAgente, 'Voce nao tem permissao para consultar cliente.'), async (req, res) => {
 	const effectiveCompanyId = req.session.adminUser.role === 'master'
 		? String(req.query.empresa_id || '').trim()
 		: currentAdminCompanyId(req);
@@ -941,7 +1055,7 @@ router.get('/admin/api/clientes/:id', ensureRoles(['master', 'admin', 'agente'],
 	}
 });
 
-router.patch('/admin/api/clientes/:id', ensureRoles(['master', 'admin', 'agente'], 'Voce nao tem permissao para atualizar cliente.'), async (req, res) => {
+router.patch('/admin/api/clientes/:id', ensureRoles(adminPermissions.modules.masterAdminAgente, 'Voce nao tem permissao para atualizar cliente.'), async (req, res) => {
 	const effectiveCompanyId = req.session.adminUser.role === 'master'
 		? String(req.body.empresa_id || '').trim()
 		: currentAdminCompanyId(req);
@@ -967,7 +1081,7 @@ router.patch('/admin/api/clientes/:id', ensureRoles(['master', 'admin', 'agente'
 	}
 });
 
-router.get('/admin/empresas', ensureRoles(['master'], 'Voce nao tem permissao para acessar o cadastro de empresas.'), async (req, res) => {
+router.get('/admin/empresas', ensureRoles(adminPermissions.modules.master, 'Voce nao tem permissao para acessar o cadastro de empresas.'), async (req, res) => {
 	try {
 		const companies = await adminCompanies.listCompanies(req.session.adminUser.token);
 
@@ -986,7 +1100,7 @@ router.get('/admin/empresas', ensureRoles(['master'], 'Voce nao tem permissao pa
 	}
 });
 
-router.get('/admin/empresas/nova', ensureRoles(['master'], 'Voce nao tem permissao para acessar o cadastro de empresas.'), (req, res) => {
+router.get('/admin/empresas/nova', ensureRoles(adminPermissions.modules.master, 'Voce nao tem permissao para acessar o cadastro de empresas.'), (req, res) => {
 	return res.render('backoffice/companies/form', {
 		title: 'Nova empresa',
 		page: 'empresas',
@@ -998,7 +1112,7 @@ router.get('/admin/empresas/nova', ensureRoles(['master'], 'Voce nao tem permiss
 	});
 });
 
-router.post('/admin/empresas', ensureRoles(['master'], 'Voce nao tem permissao para acessar o cadastro de empresas.'), async (req, res) => {
+router.post('/admin/empresas', ensureRoles(adminPermissions.modules.master, 'Voce nao tem permissao para acessar o cadastro de empresas.'), async (req, res) => {
 	const companyForm = buildCompanyForm(req.body);
 
 	if (!companyForm.nome || !companyForm.slug || !companyForm.telefone || !companyForm.endereco) {
@@ -1033,7 +1147,7 @@ router.post('/admin/empresas', ensureRoles(['master'], 'Voce nao tem permissao p
 	}
 });
 
-router.get('/admin/empresas/:id/editar', ensureRoles(['master'], 'Voce nao tem permissao para acessar o cadastro de empresas.'), async (req, res) => {
+router.get('/admin/empresas/:id/editar', ensureRoles(adminPermissions.modules.master, 'Voce nao tem permissao para acessar o cadastro de empresas.'), async (req, res) => {
 	try {
 		const company = await adminCompanies.getCompanyById(req.session.adminUser.token, req.params.id);
 
@@ -1055,7 +1169,7 @@ router.get('/admin/empresas/:id/editar', ensureRoles(['master'], 'Voce nao tem p
 	}
 });
 
-router.post('/admin/empresas/:id/status', ensureRoles(['master'], 'Voce nao tem permissao para acessar o cadastro de empresas.'), async (req, res) => {
+router.post('/admin/empresas/:id/status', ensureRoles(adminPermissions.modules.master, 'Voce nao tem permissao para acessar o cadastro de empresas.'), async (req, res) => {
 	const companyForm = buildCompanyForm(req.body);
 
 	try {
@@ -1078,7 +1192,7 @@ router.post('/admin/empresas/:id/status', ensureRoles(['master'], 'Voce nao tem 
 	}
 });
 
-router.get('/admin/agendamentos', ensureAuthenticated, async (req, res) => {
+router.get('/admin/agendamentos', ensureRoles(adminPermissions.modules.masterAdminAgente, 'Voce nao tem permissao para acessar o gerenciamento de agendamentos.'), async (req, res) => {
 	const today = new Date().toISOString().slice(0, 10);
 	const date = String(req.query.data || today).slice(0, 10) || today;
 	const preferredCompanyId = String(req.query.empresa_id || '').trim();
@@ -1094,7 +1208,7 @@ router.get('/admin/agendamentos', ensureAuthenticated, async (req, res) => {
 			appointments: context.appointments,
 			activeCompanies: context.activeCompanies,
 			selectedCompanyId: context.companyId,
-			selectedCompanyName: companiesById.get(context.companyId)?.nome || context.companyId,
+			selectedCompanyName: resolveSessionCompanyName(req, companiesById, context.companyId),
 			selectedDate: date,
 			isMaster: req.session.adminUser.role === 'master',
 		});
@@ -1107,7 +1221,7 @@ router.get('/admin/agendamentos', ensureAuthenticated, async (req, res) => {
 	}
 });
 
-router.get('/admin/api/agendamentos', ensureAuthenticated, async (req, res) => {
+router.get('/admin/api/agendamentos', ensureRoles(adminPermissions.modules.masterAdminAgente, 'Voce nao tem permissao para consultar agendamentos.'), async (req, res) => {
 	const today = new Date().toISOString().slice(0, 10);
 	const date = String(req.query.data || today).slice(0, 10) || today;
 	const preferredCompanyId = req.session.adminUser.role === 'master'
@@ -1122,7 +1236,7 @@ router.get('/admin/api/agendamentos', ensureAuthenticated, async (req, res) => {
 	}
 });
 
-router.patch('/admin/api/agendamentos/:id/status', ensureAuthenticated, async (req, res) => {
+router.patch('/admin/api/agendamentos/:id/status', ensureRoles(adminPermissions.modules.masterAdminAgente, 'Voce nao tem permissao para atualizar o status de agendamentos.'), async (req, res) => {
 	const newStatus = String(req.body.novo_status || req.query.novo_status || '').trim();
 	if (!newStatus) {
 		return res.status(422).json({ message: 'novo_status e obrigatorio.' });

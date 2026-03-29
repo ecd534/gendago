@@ -111,6 +111,22 @@ body {
 	color: #8f1d28;
 }
 
+.company-name-text {
+	font-size: 0.98rem;
+	line-height: 1.35;
+}
+
+.company-name-badge {
+	font-size: 0.92rem;
+	font-weight: 500;
+	line-height: 1.2;
+}
+
+.company-name-input {
+	font-size: 1rem;
+	font-weight: 500;
+}
+
 .admin-table th {
 	font-size: 0.78rem;
 	text-transform: uppercase;

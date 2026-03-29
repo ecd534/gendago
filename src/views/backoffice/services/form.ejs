@@ -55,7 +55,7 @@
 								<div class="form-text">Somente empresas ativas aparecem para o perfil master.</div>
 							<% } else { %>
 								<input type="hidden" name="empresa_id" value="<%= selectedCompanyId %>">
-								<input class="form-control form-control-lg admin-input" value="<%= selectedCompanyId %>" readonly>
+								<input class="form-control form-control-lg admin-input company-name-input" value="<%= selectedCompanyName || 'Sem empresa vinculada' %>" readonly>
 								<div class="form-text">Como admin, os servicos ficam vinculados automaticamente a sua empresa.</div>
 							<% } %>
 						</div>
@@ -100,7 +100,7 @@
 											<h3 class="h5 mb-1">Nova categoria</h3>
 											<p class="text-secondary mb-0">A nova categoria sera criada para a empresa escolhida no cadastro do servico.</p>
 										</div>
-										<span class="badge rounded-pill text-bg-light" id="category-company-badge"><%= selectedCompanyId || 'Sem empresa selecionada' %></span>
+										<span class="badge rounded-pill text-bg-light company-name-badge" id="category-company-badge"><%= selectedCompanyName || 'Sem empresa selecionada' %></span>
 									</div>
 									<div class="row g-3 align-items-end">
 										<div class="col-12 col-md-9">
@@ -182,8 +182,13 @@
 					return;
 				}
 
-				const companyId = getSelectedCompanyId();
-				categoryCompanyBadge.textContent = companyId || 'Sem empresa selecionada';
+				if (isMasterCompanySelect) {
+					const selectedOption = companySelect.options[companySelect.selectedIndex];
+					categoryCompanyBadge.textContent = selectedOption ? selectedOption.textContent : 'Sem empresa selecionada';
+					return;
+				}
+
+				categoryCompanyBadge.textContent = "<%= selectedCompanyName || 'Sem empresa selecionada' %>";
 			}
 
 			function renderCategories(categories) {

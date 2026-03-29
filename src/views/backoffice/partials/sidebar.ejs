@@ -1,15 +1,5 @@
 <%
-	const menuItems = [
-		{ key: 'dashboard', label: 'Dashboard', href: '/admin' },
-		{ key: 'usuarios', label: 'Usuarios e Perfis', href: '/admin/usuarios' },
-		{ key: 'servicos-categorias', label: 'Serviços e Categorias', href: '/admin/servicos' },
-		{ key: 'profissionais-config', label: 'Profissionais + Config', href: '/admin/profissionais' },
-		{ key: 'empresas', label: 'Empresas', href: '/admin/empresas' },
-		{ key: 'clientes', label: 'Clientes', href: '/admin/clientes' },
-		{ key: 'financeiro', label: 'Financeiro', href: '#' },
-		{ key: 'agendamentos', label: 'Gerenciar Agendamentos', href: '/admin/agendamentos' },
-		{ key: 'relatorios', label: 'Relatorios', href: '#' },
-	];
+	const allowedMenuItems = Array.isArray(sidebarMenuItems) ? sidebarMenuItems : [];
 %>
 
 <aside class="col-12 col-lg-3 col-xl-2 sidebar p-4">
@@ -29,7 +19,7 @@
 	<div class="collapse d-lg-block" id="admin-sidebar-content">
 		<div class="small text-uppercase text-secondary fw-semibold mb-2">Navegacao</div>
 		<nav class="nav nav-pills flex-column gap-2 mb-4">
-			<% menuItems.forEach((item) => { %>
+			<% allowedMenuItems.forEach((item) => { %>
 				<a class="nav-link <%= page === item.key ? 'active' : '' %>" href="<%= item.href %>"><%= item.label %></a>
 			<% }) %>
 		</nav>
@@ -37,7 +27,7 @@
 		<div class="glass-card p-3 mb-4 sidebar-session-card">
 			<div class="small text-uppercase text-secondary fw-semibold mb-1">Sessao atual</div>
 			<div class="fw-semibold"><%= currentAdmin ? currentAdmin.name : 'Administrador' %></div>
-			<div class="small text-secondary text-capitalize"><%= currentAdmin ? currentAdmin.empresa : 'sem Empresa' %></div>
+			<div class="text-secondary text-capitalize company-name-text"><%= currentAdmin ? (currentAdmin.empresa_nome || 'Sem empresa vinculada') : 'sem Empresa' %></div>
 			<div class="small text-secondary text-capitalize"><%= currentAdmin ? currentAdmin.role : 'sem perfil' %></div>
 			<div class="small text-secondary"><%= currentAdmin ? currentAdmin.email : '' %></div>
 			<form action="/admin/logout" method="post" class="mt-3">

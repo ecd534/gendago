@@ -31,7 +31,7 @@
 									</select>
 								</form>
 							<% } else { %>
-								<span class="badge rounded-pill text-bg-light px-3 py-2"><%= selectedCompanyName || 'Empresa nao vinculada' %></span>
+								<span class="badge rounded-pill text-bg-light px-3 py-2 company-name-badge"><%= selectedCompanyName || 'Empresa nao vinculada' %></span>
 							<% } %>
 							<a href="/admin/servicos/novo<%= selectedCompanyId ? `?empresa_id=${encodeURIComponent(selectedCompanyId)}` : '' %>" class="btn btn-dark rounded-pill px-4">Novo servico</a>
 						</div>

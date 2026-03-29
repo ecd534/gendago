@@ -163,9 +163,9 @@ async function listOverlappingAppointments(professionalId, startDateTime, endDat
 		SELECT id, profissional_id, data_hora_inicio, data_hora_fim, status
 		FROM venus.agendamentos
 		WHERE profissional_id = $1
-		  AND status = ANY($2)
+		  AND lower(trim(coalesce(status, ''))) = ANY($2)
 		  AND data_hora_inicio < $3::timestamptz
-		  AND data_hora_fim > $4::timestamptz
+		  AND coalesce(data_hora_fim, data_hora_inicio + interval '30 minutes') > $4::timestamptz
 		ORDER BY data_hora_inicio ASC
 	`;
 	const result = await query(sql, [professionalId, ['agendado', 'confirmado'], endDateTime, startDateTime]);

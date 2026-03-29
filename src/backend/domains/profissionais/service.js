@@ -141,6 +141,15 @@ function overlapsTimeRange(slotStart, slotEnd, rangeStart, rangeEnd) {
 	return slotStart < rangeEnd && slotEnd > rangeStart;
 }
 
+function getAppointmentEndDate(appointment) {
+	const start = new Date(appointment.data_hora_inicio);
+	const end = appointment.data_hora_fim ? new Date(appointment.data_hora_fim) : new Date(start.getTime() + 30 * 60000);
+	return {
+		start,
+		end,
+	};
+}
+
 async function getProfessionalOrThrow(professionalId) {
 	const professional = await repository.findProfessionalById(professionalId);
 	if (!professional) {
@@ -349,8 +358,8 @@ async function getPublicProfessionalAvailability(professionalId, dateValue) {
 		});
 
 		const booked = appointments.some((appointment) => {
-			const appointmentStart = new Date(appointment.data_hora_inicio);
-			return appointmentStart.getHours() === current.getHours() && appointmentStart.getMinutes() === current.getMinutes();
+			const appointmentRange = getAppointmentEndDate(appointment);
+			return overlapsTimeRange(current, nextSlot, appointmentRange.start, appointmentRange.end);
 		});
 
 		horarios.push({

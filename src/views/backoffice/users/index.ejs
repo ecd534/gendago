@@ -51,7 +51,7 @@
 										</td>
 										<td data-label="E-mail"><%= user.email %></td>
 										<td data-label="Nivel"><span class="badge rounded-pill text-bg-light text-capitalize"><%= user.nivel %></span></td>
-										<td data-label="Empresa"><%= user.empresa_id || 'Global' %></td>
+										<td data-label="Empresa" class="company-name-text"><%= user.empresa_nome || 'Global' %></td>
 										<td data-label="Status">
 											<span class="badge rounded-pill <%= user.ativo ? 'badge-status-active' : 'badge-status-inactive' %>">
 												<%= user.ativo ? 'Ativo' : 'Inativo' %>

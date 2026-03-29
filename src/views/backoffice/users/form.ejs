@@ -48,8 +48,18 @@
 							</select>
 						</div>
 						<div class="col-12 col-md-6">
-							<label class="form-label fw-semibold" for="empresa_id">Empresa ID</label>
-							<input class="form-control form-control-lg admin-input" id="empresa_id" name="empresa_id" value="<%= userForm.empresa_id %>" placeholder="UUID da empresa ou vazio para master/global">
+							<label class="form-label fw-semibold" for="empresa_id">Empresa</label>
+							<% if (isMaster) { %>
+								<select class="form-select form-select-lg admin-input" id="empresa_id" name="empresa_id">
+									<option value="" <%= !selectedCompanyId ? 'selected' : '' %>>Global (sem empresa)</option>
+									<% (activeCompanies || []).forEach((company) => { %>
+										<option value="<%= company.id %>" <%= selectedCompanyId === company.id ? 'selected' : '' %>><%= company.nome %></option>
+									<% }) %>
+								</select>
+							<% } else { %>
+								<input type="hidden" name="empresa_id" value="<%= selectedCompanyId || userForm.empresa_id %>">
+								<input class="form-control form-control-lg admin-input company-name-input" value="<%= selectedCompanyName || 'Sem empresa vinculada' %>" readonly>
+							<% } %>
 						</div>
 						<div class="col-12 col-md-6">
 							<label class="form-label fw-semibold" for="senha">Senha</label>
