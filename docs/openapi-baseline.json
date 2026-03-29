@@ -1,0 +1,1238 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Gendago API",
+    "version": "1.0.0",
+    "description": "Contrato gerado automaticamente a partir de src/route/api.js"
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Node local backend"
+    }
+  ],
+  "paths": {
+    "/usuarios": {
+      "get": {
+        "tags": [
+          "Usuários"
+        ],
+        "summary": "GET /usuarios",
+        "operationId": "get_usuarios",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Usuários"
+        ],
+        "summary": "POST /usuarios",
+        "operationId": "post_usuarios",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/usuarios/{user_id}": {
+      "put": {
+        "tags": [
+          "Usuários"
+        ],
+        "summary": "PUT /usuarios/:user_id",
+        "operationId": "put_usuarios_user_id",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/usuarios/login": {
+      "post": {
+        "tags": [
+          "Usuários"
+        ],
+        "summary": "POST /usuarios/login",
+        "operationId": "post_usuarios_login",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/empresas": {
+      "get": {
+        "tags": [
+          "Empresas"
+        ],
+        "summary": "GET /empresas",
+        "operationId": "get_empresas",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Empresas"
+        ],
+        "summary": "POST /empresas",
+        "operationId": "post_empresas",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/empresas/{empresa_id}": {
+      "get": {
+        "tags": [
+          "Empresas"
+        ],
+        "summary": "GET /empresas/:empresa_id",
+        "operationId": "get_empresas_empresa_id",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Empresas"
+        ],
+        "summary": "PATCH /empresas/:empresa_id",
+        "operationId": "patch_empresas_empresa_id",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/categorias/{empresa_id}": {
+      "get": {
+        "tags": [
+          "Configurações"
+        ],
+        "summary": "GET /categorias/:empresa_id",
+        "operationId": "get_categorias_empresa_id",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apenas_ativas",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/categorias": {
+      "post": {
+        "tags": [
+          "Configurações"
+        ],
+        "summary": "POST /categorias",
+        "operationId": "post_categorias",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/categorias/{categoria_id}": {
+      "patch": {
+        "tags": [
+          "Configurações"
+        ],
+        "summary": "PATCH /categorias/:categoria_id",
+        "operationId": "patch_categorias_categoria_id",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "categoria_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nome",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ativo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/servicos/detalhe/{servico_id}": {
+      "get": {
+        "tags": [
+          "Configurações"
+        ],
+        "summary": "GET /servicos/detalhe/:servico_id",
+        "operationId": "get_servicos_detalhe_servico_id",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "servico_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/servicos/categoria/{categoria_id}": {
+      "get": {
+        "tags": [
+          "Configurações"
+        ],
+        "summary": "GET /servicos/categoria/:categoria_id",
+        "operationId": "get_servicos_categoria_categoria_id",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "categoria_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apenas_ativos",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/servicos/empresa/{empresa_id}": {
+      "get": {
+        "tags": [
+          "Configurações"
+        ],
+        "summary": "GET /servicos/empresa/:empresa_id",
+        "operationId": "get_servicos_empresa_empresa_id",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apenas_ativos",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/servicos/{empresa_id}": {
+      "get": {
+        "tags": [
+          "Configurações"
+        ],
+        "summary": "GET /servicos/:empresa_id",
+        "operationId": "get_servicos_empresa_id",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apenas_ativos",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/servicos": {
+      "post": {
+        "tags": [
+          "Configurações"
+        ],
+        "summary": "POST /servicos",
+        "operationId": "post_servicos",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/profissionais/{empresa_id}": {
+      "get": {
+        "tags": [
+          "Profissionais e Configurações"
+        ],
+        "summary": "GET /profissionais/:empresa_id",
+        "operationId": "get_profissionais_empresa_id",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/profissionais": {
+      "post": {
+        "tags": [
+          "Profissionais e Configurações"
+        ],
+        "summary": "POST /profissionais",
+        "operationId": "post_profissionais",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/escalas/{profissional_id}": {
+      "get": {
+        "tags": [
+          "Profissionais e Configurações"
+        ],
+        "summary": "GET /escalas/:profissional_id",
+        "operationId": "get_escalas_profissional_id",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "profissional_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/escalas": {
+      "post": {
+        "tags": [
+          "Profissionais e Configurações"
+        ],
+        "summary": "POST /escalas",
+        "operationId": "post_escalas",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/bloqueios/{profissional_id}": {
+      "get": {
+        "tags": [
+          "Profissionais e Configurações"
+        ],
+        "summary": "GET /bloqueios/:profissional_id",
+        "operationId": "get_bloqueios_profissional_id",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "profissional_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/bloqueios": {
+      "post": {
+        "tags": [
+          "Profissionais e Configurações"
+        ],
+        "summary": "POST /bloqueios",
+        "operationId": "post_bloqueios",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/disponibilidade": {
+      "get": {
+        "tags": [
+          "Profissionais e Configurações"
+        ],
+        "summary": "GET /disponibilidade",
+        "operationId": "get_disponibilidade",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "profissional_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "data_consulta",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "servico_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/clientes": {
+      "get": {
+        "tags": [
+          "Clientes"
+        ],
+        "summary": "GET /clientes",
+        "operationId": "get_clientes",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Clientes"
+        ],
+        "summary": "POST /clientes",
+        "operationId": "post_clientes",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/clientes/telefone/{telefone}": {
+      "get": {
+        "tags": [
+          "Clientes"
+        ],
+        "summary": "GET /clientes/telefone/:telefone",
+        "operationId": "get_clientes_telefone_telefone",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "telefone",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/clientes/{cliente_id}": {
+      "get": {
+        "tags": [
+          "Clientes"
+        ],
+        "summary": "GET /clientes/:cliente_id",
+        "operationId": "get_clientes_cliente_id",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cliente_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Clientes"
+        ],
+        "summary": "PATCH /clientes/:cliente_id",
+        "operationId": "patch_clientes_cliente_id",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cliente_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/agendamentos": {
+      "get": {
+        "tags": [
+          "Agendamentos"
+        ],
+        "summary": "GET /agendamentos",
+        "operationId": "get_agendamentos",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "data",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Agendamentos"
+        ],
+        "summary": "POST /agendamentos",
+        "operationId": "post_agendamentos",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/agendamentos/{agendamento_id}/status": {
+      "patch": {
+        "tags": [
+          "Agendamentos"
+        ],
+        "summary": "PATCH /agendamentos/:agendamento_id/status",
+        "operationId": "patch_agendamentos_agendamento_id_status",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agendamento_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "novo_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/agendamentos/detalhado/{empresa_id}": {
+      "get": {
+        "tags": [
+          "Agendamentos"
+        ],
+        "summary": "GET /agendamentos/detalhado/:empresa_id",
+        "operationId": "get_agendamentos_detalhado_empresa_id",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

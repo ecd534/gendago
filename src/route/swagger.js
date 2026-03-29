@@ -6,7 +6,7 @@ const swaggerUi = require('swagger-ui-express');
 const router = express.Router();
 
 function loadOpenApiDocument() {
-	const filePath = path.join(__dirname, '../../migration/openapi-baseline.json');
+	const filePath = path.join(__dirname, '../../docs/openapi-baseline.json');
 	const raw = fs.readFileSync(filePath, 'utf8');
 	const document = JSON.parse(raw);
 
