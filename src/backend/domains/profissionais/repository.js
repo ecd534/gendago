@@ -131,6 +131,34 @@ async function listActiveProfessionalsByService(serviceId) {
 	return result.rows;
 }
 
+async function listProfessionalsByService(serviceId) {
+	const sql = `
+		SELECT p.id, p.nome, p.ativo, p.empresa_id
+		FROM venus.profissionais p
+		INNER JOIN venus.profissional_servico ps ON ps.profissional_id = p.id
+		WHERE ps.servico_id = $1
+		ORDER BY p.nome ASC
+	`;
+	const result = await query(sql, [serviceId]);
+	return result.rows;
+}
+
+async function addProfessionalToService({ professionalId, serviceId }) {
+	const sql = `
+		INSERT INTO venus.profissional_servico (profissional_id, servico_id)
+		VALUES ($1, $2)
+		ON CONFLICT DO NOTHING
+	`;
+	await query(sql, [professionalId, serviceId]);
+}
+
+async function removeProfessionalFromService({ professionalId, serviceId }) {
+	await query(
+		'DELETE FROM venus.profissional_servico WHERE profissional_id = $1 AND servico_id = $2',
+		[professionalId, serviceId],
+	);
+}
+
 async function listOverlappingAppointments(professionalId, startDateTime, endDateTime) {
 	const sql = `
 		SELECT id, profissional_id, servico_id, data_hora_inicio, data_hora_fim, status
@@ -158,5 +186,8 @@ module.exports = {
 	createBlock,
 	findServiceById,
 	listActiveProfessionalsByService,
+	listProfessionalsByService,
+	addProfessionalToService,
+	removeProfessionalFromService,
 	listOverlappingAppointments,
 };

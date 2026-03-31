@@ -187,6 +187,41 @@ body {
 	font-size: 0.95rem;
 }
 
+.store-contact-item {
+	display: flex;
+	align-items: center;
+	gap: 0.55rem;
+}
+
+.store-contact-item i {
+	color: var(--store-muted);
+	font-size: 0.95rem;
+}
+
+.store-contact-actions {
+	padding-top: 0.25rem;
+	border-top: 1px solid var(--store-stroke);
+}
+
+.btn-social {
+	background: #fff;
+	border: 1px solid var(--store-stroke);
+	color: var(--store-text);
+}
+
+.btn-social:hover,
+.btn-social:focus,
+.btn-social:active {
+	background: #f2eee6 !important;
+	border-color: rgba(31, 42, 42, 0.22) !important;
+	color: var(--store-text) !important;
+}
+
+.btn-social:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+
 .store-footer {
 	border-top: 1px solid var(--store-stroke);
 	background: rgba(255, 255, 255, 0.72);

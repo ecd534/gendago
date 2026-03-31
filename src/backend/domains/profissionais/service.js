@@ -321,6 +321,49 @@ async function getPublicProfessionalsByService(serviceId) {
 	};
 }
 
+async function listProfessionalsByService(viewer, serviceId) {
+	const service = await repository.findServiceById(serviceId);
+	if (!service) {
+		throw createError('Servico nao encontrado', 404);
+	}
+
+	ensureCompanyAccess(viewer, service.empresa_id);
+	const professionals = await repository.listProfessionalsByService(serviceId);
+	return professionals.map(normalizeProfessional);
+}
+
+async function addProfessionalToService(viewer, serviceId, professionalId) {
+	const service = await repository.findServiceById(serviceId);
+	if (!service) {
+		throw createError('Servico nao encontrado', 404);
+	}
+
+	ensureCompanyAccess(viewer, service.empresa_id);
+
+	const professional = await repository.findProfessionalById(professionalId);
+	if (!professional) {
+		throw createError('Profissional nao encontrado', 404);
+	}
+
+	if (String(professional.empresa_id) !== String(service.empresa_id)) {
+		throw createError('Profissional nao pertence a esta empresa', 403);
+	}
+
+	await repository.addProfessionalToService({ professionalId, serviceId });
+	return { status: 'Profissional vinculado ao servico' };
+}
+
+async function removeProfessionalFromService(viewer, serviceId, professionalId) {
+	const service = await repository.findServiceById(serviceId);
+	if (!service) {
+		throw createError('Servico nao encontrado', 404);
+	}
+
+	ensureCompanyAccess(viewer, service.empresa_id);
+	await repository.removeProfessionalFromService({ professionalId, serviceId });
+	return { status: 'Profissional removido do servico' };
+}
+
 async function getPublicProfessionalAvailability(professionalId, dateValue) {
 	const professional = await getProfessionalOrThrow(professionalId);
 	if (!professional.ativo) {
@@ -386,4 +429,7 @@ module.exports = {
 	getAvailability,
 	getPublicProfessionalsByService,
 	getPublicProfessionalAvailability,
+	listProfessionalsByService,
+	addProfessionalToService,
+	removeProfessionalFromService,
 };

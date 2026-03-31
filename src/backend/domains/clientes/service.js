@@ -60,6 +60,7 @@ function ensureCompanyAccess(viewer, companyId) {
 	}
 
 	if (viewer.nivel !== 'admin' && viewer.nivel !== 'agente') {
+		throw createError('Access denied', 403);
 	}
 
 	if (companyId && String(viewer.empresa_id) !== String(companyId)) {

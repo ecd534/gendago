@@ -81,8 +81,27 @@ async function createService(token, form) {
 	}
 }
 
+async function updateService(token, serviceId, form) {
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
+
+	try {
+		const updated = await localCatalogService.updateService(viewer, serviceId, form);
+		return normalizeService(updated || form);
+	} catch (error) {
+		const customError = new Error(error.message || extractApiError(error));
+		customError.statusCode = error.statusCode || 500;
+		throw customError;
+	}
+}
+
 module.exports = {
 	listServicesByCompany,
 	getServiceById,
 	createService,
+	updateService,
 };

@@ -9,7 +9,13 @@
 	<link rel="stylesheet" href="/styles/admin.css">
 </head>
 <body>
-	<div class="container-fluid backoffice-shell">
+	<div class="container-fluid backoffice-shell" id="service-page"
+		data-service-detail-endpoint-template="/admin/api/servicos/__SERVICE_ID__"
+		data-service-update-endpoint-template="/admin/api/servicos/__SERVICE_ID__"
+		data-service-professionals-endpoint-template="/admin/api/servicos/__SERVICE_ID__/profissionais"
+		data-professionals-endpoint="/admin/api/profissionais"
+		data-category-endpoint-template="/admin/api/empresas/__EMPRESA_ID__/categorias"
+		data-selected-company-id="<%= selectedCompanyId || '' %>">
 		<div class="row min-vh-100">
 			<%- include('../partials/sidebar', { currentAdmin, page }) %>
 
@@ -23,15 +29,21 @@
 						</div>
 						<div class="d-flex flex-column flex-md-row gap-2 align-items-md-center">
 							<% if (isMaster) { %>
-								<form action="/admin/servicos" method="get" class="d-flex gap-2 align-items-center flex-wrap">
-									<select class="form-select admin-input" name="empresa_id" onchange="this.form.submit()">
-										<% activeCompanies.forEach((company) => { %>
-											<option value="<%= company.id %>" <%= selectedCompanyId === company.id ? 'selected' : '' %>><%= company.nome %></option>
-										<% }) %>
-									</select>
-								</form>
+								<div>
+									<label class="form-label small fw-semibold mb-1">Empresa</label>
+									<form action="/admin/servicos" method="get" class="d-flex gap-2 align-items-center flex-wrap">
+										<select class="form-select admin-input" name="empresa_id" onchange="this.form.submit()">
+											<% activeCompanies.forEach((company) => { %>
+												<option value="<%= company.id %>" <%= String(selectedCompanyId || '') === String(company.id || '') ? 'selected' : '' %>><%= company.nome %></option>
+											<% }) %>
+										</select>
+									</form>
+								</div>
 							<% } else { %>
-								<span class="badge rounded-pill text-bg-light px-3 py-2 company-name-badge"><%= selectedCompanyName || 'Empresa nao vinculada' %></span>
+								<div>
+									<label class="form-label small fw-semibold mb-1">Empresa</label>
+									<input type="text" class="form-control admin-input" value="<%= selectedCompanyName || 'Empresa nao vinculada' %>" readonly>
+								</div>
 							<% } %>
 							<a href="/admin/servicos/novo<%= selectedCompanyId ? `?empresa_id=${encodeURIComponent(selectedCompanyId)}` : '' %>" class="btn btn-dark rounded-pill px-4">Novo servico</a>
 						</div>
@@ -51,12 +63,13 @@
 									<th>Categoria</th>
 									<th>Preco</th>
 									<th>Duracao</th>
+									<th class="text-end">Acoes</th>
 								</tr>
 							</thead>
 							<tbody>
 								<% if (!services.length) { %>
 									<tr>
-										<td data-label="Servico" colspan="4" class="text-secondary">Nenhum servico encontrado para a empresa selecionada.</td>
+										<td data-label="Servico" colspan="5" class="text-secondary">Nenhum servico encontrado para a empresa selecionada.</td>
 									</tr>
 								<% } %>
 								<% services.forEach((service) => { %>
@@ -68,6 +81,17 @@
 										<td data-label="Categoria"><%= service.categoria_nome %></td>
 										<td data-label="Preco">R$ <%= Number(service.preco || 0).toFixed(2).replace('.', ',') %></td>
 										<td data-label="Duracao"><%= service.duracao_minutos %> min</td>
+										<td data-label="Acoes">
+											<div class="d-flex justify-content-end gap-2 flex-wrap">
+												<button type="button" class="btn btn-sm btn-outline-dark rounded-pill manage-service-button"
+													data-bs-toggle="modal"
+													data-bs-target="#manageServiceModal"
+													data-service-id="<%= service.id %>"
+													data-service-name="<%- service.nome %>">
+													Gerenciar
+												</button>
+											</div>
+										</td>
 									</tr>
 								<% }) %>
 							</tbody>
@@ -78,5 +102,387 @@
 		</div>
 	</div>
 	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
+
+	<div class="modal fade" id="manageServiceModal" tabindex="-1" aria-labelledby="manageServiceModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-lg">
+			<div class="modal-content border-0 rounded-4">
+				<div class="modal-header border-0 pb-0">
+					<div>
+						<h2 class="modal-title h4 mb-1" id="manageServiceModalLabel">Gerenciar servico</h2>
+						<p class="text-secondary mb-0" id="manageServiceSubtitle">Edite nome, preco, duracao, categoria e status do servico.</p>
+					</div>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+				</div>
+				<div class="modal-body pt-4">
+					<div id="manage-service-feedback" class="alert d-none rounded-4 border-0" role="alert"></div>
+					<form id="manage-service-form" class="row g-3">
+						<div class="col-12 col-md-6">
+							<label class="form-label fw-semibold" for="manage-service-nome">Nome</label>
+							<input class="form-control admin-input" id="manage-service-nome" name="nome" required>
+						</div>
+						<div class="col-12 col-md-3">
+							<label class="form-label fw-semibold" for="manage-service-preco">Preco (R$)</label>
+							<input type="number" step="0.01" min="0" class="form-control admin-input" id="manage-service-preco" name="preco" required>
+						</div>
+						<div class="col-12 col-md-3">
+							<label class="form-label fw-semibold" for="manage-service-duracao">Duracao (min)</label>
+							<input type="number" min="1" class="form-control admin-input" id="manage-service-duracao" name="duracao_minutos" required>
+						</div>
+						<div class="col-12 col-md-6">
+							<label class="form-label fw-semibold" for="manage-service-categoria">Categoria</label>
+							<select class="form-select admin-input" id="manage-service-categoria" name="categoria_id" required>
+								<option value="">Carregando categorias...</option>
+							</select>
+						</div>
+						<div class="col-12 col-md-6">
+							<label class="form-label fw-semibold" for="manage-service-ativo">Status</label>
+							<select class="form-select admin-input" id="manage-service-ativo" name="ativo">
+								<option value="true">Ativo</option>
+								<option value="false">Inativo</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<label class="form-label fw-semibold" for="manage-service-professional-select">Profissionais que atendem este servico</label>
+							<div class="d-flex gap-2 align-items-start">
+								<select class="form-select admin-input" id="manage-service-professional-select">
+									<option value="">Selecione um profissional</option>
+								</select>
+								<button type="button" class="btn btn-outline-dark rounded-pill px-3" id="manage-add-service-professional">Adicionar</button>
+							</div>
+							<div id="manage-service-professional-feedback" class="small text-secondary mt-2"></div>
+							<div id="manage-service-professional-tags" class="d-flex flex-wrap gap-2 mt-3"></div>
+						</div>
+						<div class="col-12 d-flex justify-content-end gap-2 pt-2">
+							<button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+							<button type="submit" class="btn btn-dark rounded-pill px-4" id="manage-service-submit">Salvar alteracoes</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		(function () {
+			const page = document.getElementById('service-page');
+			if (!page) {
+				return;
+			}
+
+			const manageServiceForm = document.getElementById('manage-service-form');
+			const manageFeedback = document.getElementById('manage-service-feedback');
+			const manageSubtitle = document.getElementById('manageServiceSubtitle');
+			const manageServiceCategorySelect = document.getElementById('manage-service-categoria');
+			const manageServiceAtivoSelect = document.getElementById('manage-service-ativo');
+			const manageServiceProfessionalSelect = document.getElementById('manage-service-professional-select');
+			const manageAddServiceProfessionalButton = document.getElementById('manage-add-service-professional');
+			const manageServiceProfessionalFeedback = document.getElementById('manage-service-professional-feedback');
+			const manageServiceProfessionalTags = document.getElementById('manage-service-professional-tags');
+
+			const selectedCompanyId = page.dataset.selectedCompanyId || '';
+			const detailTemplate = page.dataset.serviceDetailEndpointTemplate;
+			const updateTemplate = page.dataset.serviceUpdateEndpointTemplate;
+			const professionalsTemplate = page.dataset.serviceProfessionalsEndpointTemplate;
+			const professionalsEndpoint = page.dataset.professionalsEndpoint;
+			const categoryTemplate = page.dataset.categoryEndpointTemplate;
+
+			let selectedServiceId = '';
+
+			function setFeedback(type, text) {
+				if (!manageFeedback) {
+					return;
+				}
+
+				if (!text) {
+					manageFeedback.className = 'alert d-none rounded-4 border-0';
+					manageFeedback.textContent = '';
+					return;
+				}
+
+				manageFeedback.className = `alert alert-${type} rounded-4 border-0`;
+				manageFeedback.textContent = text;
+			}
+
+			function parseResponse(response) {
+				return response.text().then((text) => {
+					try {
+						return text ? JSON.parse(text) : {};
+					} catch {
+						return { message: text || 'Resposta invalida da API.' };
+					}
+				});
+			}
+
+			function setProfessionalFeedback(text) {
+				if (!manageServiceProfessionalFeedback) {
+					return;
+				}
+
+				manageServiceProfessionalFeedback.textContent = text || '';
+			}
+
+			function renderProfessionalTags(professionals) {
+				if (!manageServiceProfessionalTags) {
+					return;
+				}
+
+				if (!professionals.length) {
+					manageServiceProfessionalTags.innerHTML = '<span class="text-secondary small">Nenhum profissional vinculado.</span>';
+					return;
+				}
+
+				manageServiceProfessionalTags.innerHTML = professionals.map((professional) => (`
+					<span class="badge text-bg-light rounded-pill px-3 py-2 d-inline-flex align-items-center gap-2" data-professional-id="${professional.id}">
+						<span>${String(professional.nome || '').replace(/</g, '&lt;')}</span>
+						<button type="button" class="btn-close" aria-label="Remover profissional"></button>
+					</span>
+				`)).join('');
+			}
+
+			async function loadCompanyProfessionals() {
+				if (!manageServiceProfessionalSelect) {
+					return;
+				}
+
+				manageServiceProfessionalSelect.innerHTML = '<option value="">Selecione um profissional</option>';
+				if (!selectedCompanyId) {
+					return;
+				}
+
+				try {
+					const response = await fetch(`${professionalsEndpoint}?empresa_id=${encodeURIComponent(selectedCompanyId)}`, { headers: { Accept: 'application/json' } });
+					const result = await parseResponse(response);
+					const professionals = Array.isArray(result) ? result : (Array.isArray(result.professionals) ? result.professionals : []);
+
+					professionals.forEach((professional) => {
+						const option = document.createElement('option');
+						option.value = professional.id;
+						option.textContent = professional.nome;
+						manageServiceProfessionalSelect.appendChild(option);
+					});
+				} catch (error) {
+					setProfessionalFeedback('Nao foi possivel carregar os profissionais da empresa.');
+				}
+			}
+
+			async function loadServiceProfessionals() {
+				if (!selectedServiceId) {
+					renderProfessionalTags([]);
+					return;
+				}
+
+				const endpoint = professionalsTemplate.replace('__SERVICE_ID__', encodeURIComponent(selectedServiceId));
+				const response = await fetch(endpoint, { headers: { Accept: 'application/json' } });
+				const result = await parseResponse(response);
+
+				if (!response.ok) {
+					throw new Error(result.message || 'Nao foi possivel carregar os profissionais do servico.');
+				}
+
+				renderProfessionalTags(Array.isArray(result) ? result : []);
+			}
+
+			async function loadCategories(currentCategoryId) {
+				if (!selectedCompanyId) {
+					manageServiceCategorySelect.innerHTML = '<option value="">Empresa nao identificada</option>';
+					return;
+				}
+
+				const endpoint = categoryTemplate.replace('__EMPRESA_ID__', encodeURIComponent(selectedCompanyId));
+
+				try {
+					const response = await fetch(`${endpoint}?onlyActive=false`, { headers: { Accept: 'application/json' } });
+					const categories = await parseResponse(response);
+
+					if (!response.ok || !Array.isArray(categories)) {
+						throw new Error('Nao foi possivel carregar as categorias.');
+					}
+
+					manageServiceCategorySelect.innerHTML = '<option value="">Selecione uma categoria</option>';
+					categories.forEach((category) => {
+						const option = document.createElement('option');
+						option.value = category.id;
+						option.textContent = category.nome;
+						if (category.id === currentCategoryId) {
+							option.selected = true;
+						}
+
+						manageServiceCategorySelect.appendChild(option);
+					});
+				} catch (error) {
+					manageServiceCategorySelect.innerHTML = '<option value="">Erro ao carregar categorias</option>';
+					setFeedback('warning', error.message);
+				}
+			}
+
+			document.querySelectorAll('.manage-service-button').forEach((button) => {
+				button.addEventListener('click', async () => {
+					selectedServiceId = button.dataset.serviceId;
+					if (manageSubtitle) {
+						manageSubtitle.textContent = `${button.dataset.serviceName} · Edite os dados do servico.`;
+					}
+
+					setFeedback(null, '');
+					setProfessionalFeedback('');
+
+					const endpoint = detailTemplate.replace('__SERVICE_ID__', encodeURIComponent(selectedServiceId));
+
+					try {
+						const response = await fetch(endpoint, { headers: { Accept: 'application/json' } });
+						const result = await parseResponse(response);
+
+						if (!response.ok) {
+							throw new Error(result.message || 'Nao foi possivel carregar o servico.');
+						}
+
+						manageServiceForm.nome.value = result.nome || '';
+						manageServiceForm.preco.value = typeof result.preco === 'number' ? result.preco : '';
+						manageServiceForm.duracao_minutos.value = result.duracao_minutos || '';
+						manageServiceAtivoSelect.value = result.ativo === false ? 'false' : 'true';
+
+						await loadCategories(result.categoria_id);
+						await loadCompanyProfessionals();
+						await loadServiceProfessionals();
+					} catch (error) {
+						setFeedback('danger', error.message);
+					}
+				});
+			});
+
+			if (manageAddServiceProfessionalButton) {
+				manageAddServiceProfessionalButton.addEventListener('click', async () => {
+					if (!selectedServiceId || !manageServiceProfessionalSelect) {
+						setProfessionalFeedback('Selecione um servico para gerenciar os profissionais.');
+						return;
+					}
+
+					const professionalId = String(manageServiceProfessionalSelect.value || '').trim();
+					if (!professionalId) {
+						setProfessionalFeedback('Selecione um profissional para adicionar.');
+						return;
+					}
+
+					setProfessionalFeedback('Adicionando profissional...');
+					const endpoint = professionalsTemplate.replace('__SERVICE_ID__', encodeURIComponent(selectedServiceId));
+
+					try {
+						const response = await fetch(endpoint, {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								Accept: 'application/json',
+							},
+							body: JSON.stringify({ profissional_id: professionalId }),
+						});
+						const result = await parseResponse(response);
+
+						if (!response.ok) {
+							throw new Error(result.message || 'Nao foi possivel adicionar o profissional.');
+						}
+
+						manageServiceProfessionalSelect.value = '';
+						await loadServiceProfessionals();
+						setProfessionalFeedback('Profissional vinculado com sucesso.');
+					} catch (error) {
+						setProfessionalFeedback(error.message);
+					}
+				});
+			}
+
+			if (manageServiceProfessionalTags) {
+				manageServiceProfessionalTags.addEventListener('click', async (event) => {
+					const removeButton = event.target.closest('button.btn-close');
+					if (!removeButton || !selectedServiceId) {
+						return;
+					}
+
+					const tag = removeButton.closest('[data-professional-id]');
+					if (!tag) {
+						return;
+					}
+
+					const professionalId = tag.dataset.professionalId;
+					setProfessionalFeedback('Removendo profissional...');
+
+					try {
+						const endpoint = `${professionalsTemplate.replace('__SERVICE_ID__', encodeURIComponent(selectedServiceId))}/${encodeURIComponent(professionalId)}`;
+						const response = await fetch(endpoint, {
+							method: 'DELETE',
+							headers: {
+								Accept: 'application/json',
+							},
+						});
+						const result = await parseResponse(response);
+
+						if (!response.ok) {
+							throw new Error(result.message || 'Nao foi possivel remover o profissional.');
+						}
+
+						await loadServiceProfessionals();
+						setProfessionalFeedback('Profissional removido com sucesso.');
+					} catch (error) {
+						setProfessionalFeedback(error.message);
+					}
+				});
+			}
+
+			if (manageServiceForm) {
+				manageServiceForm.addEventListener('submit', async (event) => {
+					event.preventDefault();
+					setFeedback(null, '');
+
+					if (!selectedServiceId) {
+						setFeedback('warning', 'Selecione um servico para gerenciar.');
+						return;
+					}
+
+					const formData = new FormData(manageServiceForm);
+					const payload = {
+						nome: String(formData.get('nome') || '').trim(),
+						preco: Number(formData.get('preco') || 0),
+						duracao_minutos: Number(formData.get('duracao_minutos') || 0),
+						categoria_id: String(formData.get('categoria_id') || '').trim(),
+						ativo: formData.get('ativo') !== 'false',
+					};
+
+					if (!payload.nome || !payload.preco || !payload.duracao_minutos || !payload.categoria_id) {
+						setFeedback('danger', 'Preencha todos os campos obrigatorios.');
+						return;
+					}
+
+					const submitBtn = document.getElementById('manage-service-submit');
+					if (submitBtn) {
+						submitBtn.disabled = true;
+					}
+
+					const endpoint = updateTemplate.replace('__SERVICE_ID__', encodeURIComponent(selectedServiceId));
+
+					try {
+						const response = await fetch(endpoint, {
+							method: 'PATCH',
+							headers: {
+								'Content-Type': 'application/json',
+								Accept: 'application/json',
+							},
+							body: JSON.stringify(payload),
+						});
+						const result = await parseResponse(response);
+
+						if (!response.ok) {
+							throw new Error(result.message || 'Nao foi possivel atualizar o servico.');
+						}
+
+						setFeedback('success', 'Servico atualizado com sucesso.');
+						setTimeout(() => window.location.reload(), 450);
+					} catch (error) {
+						setFeedback('danger', error.message);
+						if (submitBtn) {
+							submitBtn.disabled = false;
+						}
+					}
+				});
+			}
+		})();
+	</script>
 </body>
 </html>

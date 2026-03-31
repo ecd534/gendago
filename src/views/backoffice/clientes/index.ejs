@@ -26,15 +26,21 @@
 						</div>
 						<div class="d-flex flex-column flex-md-row gap-2 align-items-md-center">
 							<% if (isMaster) { %>
-								<form action="/admin/clientes" method="get" class="d-flex gap-2 align-items-center flex-wrap">
-									<select class="form-select admin-input" name="empresa_id" onchange="this.form.submit()">
-										<% activeCompanies.forEach((company) => { %>
-											<option value="<%= company.id %>" <%= selectedCompanyId === company.id ? 'selected' : '' %>><%= company.nome %></option>
-										<% }) %>
-									</select>
-								</form>
+								<div>
+									<label class="form-label small fw-semibold mb-1">Empresa</label>
+									<form action="/admin/clientes" method="get" class="d-flex gap-2 align-items-center flex-wrap">
+										<select class="form-select admin-input" name="empresa_id" onchange="this.form.submit()">
+											<% activeCompanies.forEach((company) => { %>
+												<option value="<%= company.id %>" <%= String(selectedCompanyId || '') === String(company.id || '') ? 'selected' : '' %>><%= company.nome %></option>
+											<% }) %>
+										</select>
+									</form>
+								</div>
 							<% } else { %>
-								<span class="badge rounded-pill text-bg-light px-3 py-2 company-name-badge"><%= selectedCompanyName || 'Empresa nao vinculada' %></span>
+								<div>
+									<label class="form-label small fw-semibold mb-1">Empresa</label>
+									<input type="text" class="form-control admin-input" value="<%= selectedCompanyName || 'Empresa nao vinculada' %>" readonly>
+								</div>
 							<% } %>
 							<button type="button" class="btn btn-dark rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createClientModal">Novo cliente</button>
 						</div>

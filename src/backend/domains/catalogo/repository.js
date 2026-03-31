@@ -109,6 +109,21 @@ async function createService({ nome, preco, duracaoMinutos, empresaId, categoria
 	return result.rows[0] || null;
 }
 
+async function updateService(serviceId, { nome, preco, duracaoMinutos, categoriaId, ativo }) {
+	const sql = `
+		UPDATE venus.servicos
+		SET nome = $1,
+			preco = $2,
+			duracao_minutos = $3,
+			categoria_id = $4,
+			ativo = $5
+		WHERE id = $6
+		RETURNING id, nome, preco, duracao_minutos, empresa_id, categoria_id, ativo
+	`;
+	const result = await query(sql, [nome, preco, duracaoMinutos, categoriaId, ativo, serviceId]);
+	return result.rows[0] || null;
+}
+
 module.exports = {
 	listCategoriesByCompany,
 	findCategoryById,
@@ -118,4 +133,5 @@ module.exports = {
 	listServicesByCategory,
 	findServiceById,
 	createService,
+	updateService,
 };

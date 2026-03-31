@@ -14,7 +14,7 @@ function toOpenApiPath(expressPath) {
 }
 
 function opId(method, p) {
-  return `${method}_${p.replace(/[\/{\}:.-]+/g, '_').replace(/^_+|_+$/g, '')}`;
+  return `${method}_${p.replace(/[/{}:.-]+/g, '_').replace(/^_+|_+$/g, '')}`;
 }
 
 function inferTags(p) {

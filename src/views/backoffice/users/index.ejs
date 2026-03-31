@@ -15,13 +15,33 @@
 
 			<main class="col-12 col-lg-9 col-xl-10 content-wrap">
 				<section class="glass-card p-4 p-xl-5 mb-4">
-					<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+					<div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3">
 						<div>
 							<p class="text-uppercase small fw-semibold text-secondary mb-2">Cadastro</p>
 							<h1 class="display-6 fw-semibold mb-2">Gestão de Usuários</h1>
 							<p class="text-secondary mb-0">Modulo liberado apenas para perfis master e admin, com preparacao para status ativo e inativo.</p>
 						</div>
-						<a href="/admin/usuarios/novo" class="btn btn-dark rounded-pill px-4">Novo usuario</a>
+						<div class="d-flex flex-column flex-md-row gap-2 align-items-md-center">
+							<% if (isMaster) { %>
+								<div>
+									<label class="form-label small fw-semibold mb-1">Empresa</label>
+									<form action="/admin/usuarios" method="get" class="d-flex gap-2 align-items-center flex-wrap">
+										<select class="form-select admin-input" name="empresa_id" onchange="this.form.submit()">
+											<option value="" <%= !selectedCompanyId ? 'selected' : '' %>>Todas as empresas</option>
+											<% (activeCompanies || []).forEach((company) => { %>
+												<option value="<%= company.id %>" <%= String(selectedCompanyId || '') === String(company.id || '') ? 'selected' : '' %>><%= company.nome %></option>
+											<% }) %>
+										</select>
+									</form>
+								</div>
+							<% } else { %>
+								<div>
+									<label class="form-label small fw-semibold mb-1">Empresa</label>
+									<input type="text" class="form-control admin-input" value="<%= selectedCompanyName || 'Empresa nao vinculada' %>" readonly>
+								</div>
+							<% } %>
+							<a href="/admin/usuarios/novo<%= selectedCompanyId ? `?empresa_id=${encodeURIComponent(selectedCompanyId)}` : '' %>" class="btn btn-dark rounded-pill px-4">Novo usuario</a>
+						</div>
 					</div>
 				</section>
 

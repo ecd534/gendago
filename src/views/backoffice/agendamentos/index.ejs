@@ -38,22 +38,20 @@
 									<label class="form-label small fw-semibold mb-1">Empresa</label>
 									<select class="form-select admin-input" name="empresa_id" onchange="this.form.submit()">
 										<% activeCompanies.forEach((company) => { %>
-											<option value="<%= company.id %>" <%= selectedCompanyId === company.id ? 'selected' : '' %>><%= company.nome %></option>
+											<option value="<%= company.id %>" <%= String(selectedCompanyId || '') === String(company.id || '') ? 'selected' : '' %>><%= company.nome %></option>
 										<% }) %>
 									</select>
 								</div>
 							<% } else { %>
-								<div class="align-self-center">
-									<span class="badge rounded-pill text-bg-light px-3 py-2 company-name-badge"><%= selectedCompanyName || 'Sua empresa' %></span>
+								<div>
+									<label class="form-label small fw-semibold mb-1">Empresa</label>
+									<input type="text" class="form-control admin-input" value="<%= selectedCompanyName || 'Sua empresa' %>" readonly>
 								</div>
 							<% } %>
 							<div>
 								<label class="form-label small fw-semibold mb-1">Data</label>
 								<input type="date" class="form-control admin-input" name="data" value="<%= selectedDate %>">
 							</div>
-							<% if (isMaster) { %>
-								<input type="hidden" name="empresa_id" value="<%= selectedCompanyId || '' %>" id="hidden-company-id">
-							<% } %>
 							<button type="submit" class="btn btn-dark rounded-pill px-4">Filtrar</button>
 						</form>
 					</div>
@@ -79,7 +77,9 @@
 								cancelado: 'danger',
 								concluido: 'secondary',
 							};
-							const badgeClass = statusMap[String(item.status || 'agendado').toLowerCase()] || 'light';
+							const currentStatus = String(item.status || 'agendado').toLowerCase();
+							const canUpdateStatus = currentStatus === 'agendado' || currentStatus === 'confirmado';
+							const badgeClass = statusMap[currentStatus] || 'light';
 							const horaStr = item.inicio
 								? new Date(item.inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
 								: '--:--';
@@ -107,15 +107,17 @@
 									</p>
 								</div>
 
-								<div class="mt-auto d-flex gap-2 align-items-center">
-									<select class="form-select admin-input form-select-sm status-select">
-										<option value="agendado" <%= item.status === 'agendado' ? 'selected' : '' %>>Agendado</option>
-										<option value="confirmado" <%= item.status === 'confirmado' ? 'selected' : '' %>>Confirmado</option>
-										<option value="concluido" <%= item.status === 'concluido' ? 'selected' : '' %>>Concluido</option>
-										<option value="cancelado" <%= item.status === 'cancelado' ? 'selected' : '' %>>Cancelado</option>
-									</select>
-									<button type="button" class="btn btn-dark btn-sm rounded-pill px-3 flex-shrink-0 update-status-btn">Atualizar</button>
-								</div>
+								<% if (canUpdateStatus) { %>
+									<div class="mt-auto d-flex gap-2 align-items-center">
+										<select class="form-select admin-input form-select-sm status-select">
+											<option value="agendado" <%= item.status === 'agendado' ? 'selected' : '' %>>Agendado</option>
+											<option value="confirmado" <%= item.status === 'confirmado' ? 'selected' : '' %>>Confirmado</option>
+											<option value="concluido" <%= item.status === 'concluido' ? 'selected' : '' %>>Concluido</option>
+											<option value="cancelado" <%= item.status === 'cancelado' ? 'selected' : '' %>>Cancelado</option>
+										</select>
+										<button type="button" class="btn btn-dark btn-sm rounded-pill px-3 flex-shrink-0 update-status-btn">Atualizar</button>
+									</div>
+								<% } %>
 							</div>
 						</div>
 					<% }) %>
@@ -179,14 +181,6 @@
 				});
 			});
 
-			// When master selects a company via the select, keep hidden input in sync
-			const companySelect = document.querySelector('select[name="empresa_id"]');
-			const hiddenCompany = document.getElementById('hidden-company-id');
-			if (companySelect && hiddenCompany) {
-				companySelect.addEventListener('change', () => {
-					hiddenCompany.value = companySelect.value;
-				});
-			}
 		}());
 	</script>
 </body>

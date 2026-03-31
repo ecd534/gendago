@@ -5,13 +5,12 @@ const modules = {
 };
 
 const sidebarItems = [
-	{ key: 'dashboard', label: 'Dashboard', href: '/admin', roles: modules.masterAdminAgente },
+	{ key: 'agendamentos', label: 'Gestão de Agendamentos', href: '/admin/agendamentos', roles: modules.masterAdminAgente },
 	{ key: 'usuarios', label: 'Usuarios e Perfis', href: '/admin/usuarios', roles: modules.masterAdmin },
 	{ key: 'servicos-categorias', label: 'Serviços e Categorias', href: '/admin/servicos', roles: modules.masterAdmin },
-	{ key: 'profissionais-config', label: 'Profissionais + Config', href: '/admin/profissionais', roles: modules.masterAdmin },
+	{ key: 'profissionais-config', label: 'Gestão de Profissionais', href: '/admin/profissionais', roles: modules.masterAdmin },
 	{ key: 'empresas', label: 'Empresas', href: '/admin/empresas', roles: modules.master },
 	{ key: 'clientes', label: 'Clientes', href: '/admin/clientes', roles: modules.masterAdminAgente },
-	{ key: 'agendamentos', label: 'Gerenciar Agendamentos', href: '/admin/agendamentos', roles: modules.masterAdminAgente },
 ];
 
 function getSidebarMenuByRole(role) {

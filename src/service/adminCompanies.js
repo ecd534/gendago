@@ -41,7 +41,7 @@ function extractApiError(error) {
 	return 'Nao foi possivel concluir a operacao com a API de empresas.';
 }
 
-async function listCompanies(token) {
+async function listCompanies(_token) {
 	const companies = await localCompaniesService.listCompanies();
 	return Array.isArray(companies) ? companies.map(normalizeCompany) : [];
 }

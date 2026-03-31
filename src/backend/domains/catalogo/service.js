@@ -165,6 +165,47 @@ async function createService(viewer, input) {
 	return normalizeService(created || payload);
 }
 
+async function updateService(viewer, serviceId, input) {
+	const found = await repository.findServiceById(serviceId);
+	if (!found) {
+		throw createError('Servico nao encontrado', 404);
+	}
+
+	ensureCompanyAccess(viewer, found.empresa_id);
+
+	const nome = String(input.nome || '').trim();
+	const preco = Number(input.preco || 0);
+	const duracaoMinutos = Number(input.duracao_minutos || 0);
+	const categoriaId = String(input.categoria_id || '').trim();
+
+	if (!nome || !preco || !duracaoMinutos || !categoriaId) {
+		throw createError('nome, preco, duracao_minutos e categoria_id sao obrigatorios', 422);
+	}
+
+	const category = await repository.findCategoryById(categoriaId);
+	if (!category) {
+		throw createError('Categoria nao encontrada', 404);
+	}
+
+	if (String(category.empresa_id) !== String(found.empresa_id)) {
+		throw createError('Categoria nao pertence a esta empresa', 403);
+	}
+
+	const updated = await repository.updateService(serviceId, {
+		nome,
+		preco,
+		duracaoMinutos,
+		categoriaId,
+		ativo: normalizeBoolean(input.ativo, found.ativo),
+	});
+
+	if (!updated) {
+		throw createError('Nao foi possivel atualizar o servico', 500);
+	}
+
+	return normalizeService(updated);
+}
+
 module.exports = {
 	listCategoriesByCompany,
 	createCategory,
@@ -173,4 +214,5 @@ module.exports = {
 	listServicesByCategory,
 	getServiceById,
 	createService,
+	updateService,
 };

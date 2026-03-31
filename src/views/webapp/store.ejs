@@ -10,6 +10,22 @@
 	<link rel="stylesheet" href="/styles/webapp-store.css">
 </head>
 <body>
+	<%
+		const phoneDigits = String(company.telefone || '').replace(/\D/g, '');
+		let formattedPhone = company.telefone || 'Contato nao informado';
+		let whatsappPhone = '';
+
+		if (phoneDigits.length === 11) {
+			formattedPhone = `+55 ${phoneDigits.slice(0, 2)} ${phoneDigits.slice(2, 7)}-${phoneDigits.slice(7)}`;
+			whatsappPhone = `55${phoneDigits}`;
+		} else if (phoneDigits.length === 12) {
+			formattedPhone = `+${phoneDigits.slice(0, 2)} ${phoneDigits.slice(2, 4)} ${phoneDigits.slice(4, 8)}-${phoneDigits.slice(8)}`;
+			whatsappPhone = phoneDigits;
+		} else if (phoneDigits.length === 13) {
+			formattedPhone = `+${phoneDigits.slice(0, 2)} ${phoneDigits.slice(2, 4)} ${phoneDigits.slice(4, 9)}-${phoneDigits.slice(9)}`;
+			whatsappPhone = phoneDigits;
+		}
+	%>
 	<div class="store-shell" id="store-page"
 		data-slug="<%= slug %>"
 		data-professionals-endpoint-template="/app/api/__SLUG__/servicos/__SERVICE_ID__/profissionais"
@@ -25,18 +41,8 @@
 				<div class="d-flex align-items-center justify-content-between gap-3">
 					<div>
 						<h1 class="h4 mb-1 fw-semibold"><%= company.nome %></h1>
-						<p class="small text-secondary mb-0"><%= company.telefone || 'Contato nao informado' %></p>
+						<p class="small text-secondary mb-0"><%= formattedPhone %></p>
 						<p id="client-greeting" class="small store-greeting mb-0 <%= authenticatedClient ? '' : 'd-none' %>">Olá, <span id="client-greeting-name"><%= authenticatedClient ? authenticatedClient.nome : '' %></span></p>
-					</div>
-					<div class="d-flex gap-2">
-						<% if (company.telefone) { %>
-							<a class="btn btn-whatsapp btn-sm rounded-pill icon-only" href="https://wa.me/<%= String(company.telefone).replace(/\D/g, '') %>" target="_blank" rel="noopener noreferrer" aria-label="Abrir WhatsApp">
-								<i class="bi bi-whatsapp" aria-hidden="true"></i>
-							</a>
-						<% } %>
-						<button type="button" class="btn btn-dark btn-sm rounded-pill icon-only" id="share-store" aria-label="Compartilhar loja">
-							<i class="bi bi-share-fill" aria-hidden="true"></i>
-						</button>
 					</div>
 				</div>
 			</div>
@@ -86,7 +92,7 @@
 				</div>
 			</section>
 
-			<section id="meus-agendamentos" class="mb-4">
+			<section id="meus-agendamentos" class="mb-4" tabindex="-1">
 				<div class="store-card">
 					<h2 class="h5 mb-2">Meus Agendamentos</h2>
 					<p class="text-secondary mb-3">Faca login para visualizar seus ultimos 5 agendamentos.</p>
@@ -101,13 +107,55 @@
 			</section>
 
 			<section id="contato" class="mb-5">
+				<%
+					const instagramUrl = String(company.instagram || company.instagram_url || company.instagramUrl || '').trim();
+					const tiktokUrl = String(company.tiktok || company.tiktok_url || company.tiktokUrl || '').trim();
+					const youtubeUrl = String(company.youtube || company.youtube_url || company.youtubeUrl || '').trim();
+				%>
 				<div class="store-card">
 					<h2 class="h5 mb-3">Contato</h2>
 					<ul class="list-unstyled mb-0 store-contact-list">
-						<li><strong>Email:</strong> <%= company.email || 'Nao informado' %></li>
-						<li><strong>Telefone:</strong> <%= company.telefone || 'Nao informado' %></li>
-						<li><strong>Endereco:</strong> <%= company.endereco || 'Nao informado' %></li>
+						<li class="store-contact-item"><i class="bi bi-envelope" aria-hidden="true"></i><span><%= company.email || 'Nao informado' %></span></li>
+						<li class="store-contact-item"><i class="bi bi-telephone" aria-hidden="true"></i><span><%= formattedPhone %></span></li>
+						<li class="store-contact-item"><i class="bi bi-geo-alt" aria-hidden="true"></i><span><%= company.endereco || 'Nao informado' %></span></li>
 					</ul>
+					<div class="store-contact-actions mt-3 d-flex flex-wrap gap-2 align-items-center">
+						<% if (whatsappPhone) { %>
+							<a class="btn btn-whatsapp btn-sm rounded-pill icon-only" href="https://wa.me/<%= whatsappPhone %>" target="_blank" rel="noopener noreferrer" aria-label="Abrir WhatsApp">
+								<i class="bi bi-whatsapp" aria-hidden="true"></i>
+							</a>
+						<% } %>
+
+						<% if (instagramUrl) { %>
+							<a class="btn btn-social btn-sm rounded-pill icon-only" href="<%= instagramUrl %>" target="_blank" rel="noopener noreferrer" aria-label="Abrir Instagram">
+								<i class="bi bi-instagram" aria-hidden="true"></i>
+							</a>
+						<% } else { %>
+							<button type="button" class="btn btn-social btn-sm rounded-pill icon-only" aria-label="Instagram indisponivel" disabled>
+								<i class="bi bi-instagram" aria-hidden="true"></i>
+							</button>
+						<% } %>
+
+						<% if (tiktokUrl) { %>
+							<a class="btn btn-social btn-sm rounded-pill icon-only" href="<%= tiktokUrl %>" target="_blank" rel="noopener noreferrer" aria-label="Abrir TikTok">
+								<i class="bi bi-tiktok" aria-hidden="true"></i>
+							</a>
+						<% } else { %>
+							<button type="button" class="btn btn-social btn-sm rounded-pill icon-only" aria-label="TikTok indisponivel" disabled>
+								<i class="bi bi-tiktok" aria-hidden="true"></i>
+							</button>
+						<% } %>
+
+						<% if (youtubeUrl) { %>
+							<a class="btn btn-social btn-sm rounded-pill icon-only" href="<%= youtubeUrl %>" target="_blank" rel="noopener noreferrer" aria-label="Abrir YouTube">
+								<i class="bi bi-youtube" aria-hidden="true"></i>
+							</a>
+						<% } else { %>
+							<button type="button" class="btn btn-social btn-sm rounded-pill icon-only" aria-label="YouTube indisponivel" disabled>
+								<i class="bi bi-youtube" aria-hidden="true"></i>
+							</button>
+						<% } %>
+					</div>
 				</div>
 			</section>
 		</main>
@@ -247,6 +295,9 @@
 			const greeting = document.getElementById('client-greeting');
 			const greetingName = document.getElementById('client-greeting-name');
 			const myAppointmentsList = document.getElementById('my-appointments-list');
+			const myAppointmentsSection = document.getElementById('meus-agendamentos');
+			const bookingModalElement = document.getElementById('bookingModal');
+			const bookingModal = bookingModalElement ? new bootstrap.Modal(bookingModalElement) : null;
 			const authModalElement = document.getElementById('authModal');
 			const authModal = authModalElement ? new bootstrap.Modal(authModalElement) : null;
 
@@ -307,6 +358,15 @@
 				if (authModal) {
 					authModal.hide();
 				}
+			}
+
+			function focusMyAppointmentsSection() {
+				if (!myAppointmentsSection) {
+					return;
+				}
+
+				myAppointmentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				myAppointmentsSection.focus({ preventScroll: true });
 			}
 
 			function showLoginForm() {
@@ -468,23 +528,6 @@
 					setAuthenticatedClient(null);
 				}
 			}
-
-			document.getElementById('share-store')?.addEventListener('click', async () => {
-				try {
-					if (navigator.share) {
-						await navigator.share({
-							title: document.title,
-							url: window.location.href,
-						});
-						return;
-					}
-
-					await navigator.clipboard.writeText(window.location.href);
-					setFeedback('success', 'Link copiado com sucesso.');
-				} catch (error) {
-					setFeedback('warning', 'Nao foi possivel compartilhar agora.');
-				}
-			});
 
 			showRegisterButton?.addEventListener('click', showRegisterForm);
 			showLoginButton?.addEventListener('click', showLoginForm);
@@ -693,6 +736,14 @@
 
 					setFeedback('success', result.message || 'Agendamento confirmado com sucesso.');
 					loadMyAppointments();
+
+					setTimeout(() => {
+						if (bookingModal) {
+							bookingModal.hide();
+						}
+
+						focusMyAppointmentsSection();
+					}, 3000);
 				} catch (error) {
 					setFeedback('danger', error.message);
 				}

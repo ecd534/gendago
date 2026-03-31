@@ -145,6 +145,56 @@ async function createBlock(token, form) {
 	}
 }
 
+async function listProfessionalsByService(token, serviceId) {
+	if (!serviceId) {
+		return [];
+	}
+
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
+
+	const professionals = await localProfessionalsService.listProfessionalsByService(viewer, serviceId);
+	return Array.isArray(professionals) ? professionals.map(normalizeProfessional) : [];
+}
+
+async function addProfessionalToService(token, serviceId, professionalId) {
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
+
+	try {
+		return await localProfessionalsService.addProfessionalToService(viewer, serviceId, professionalId);
+	} catch (error) {
+		const customError = new Error(error.message || extractApiError(error));
+		customError.statusCode = error.statusCode || 500;
+		throw customError;
+	}
+}
+
+async function removeProfessionalFromService(token, serviceId, professionalId) {
+	const viewer = verifyAccessToken(token);
+	if (!viewer) {
+		const error = new Error('Token invalido ou expirado');
+		error.statusCode = 401;
+		throw error;
+	}
+
+	try {
+		return await localProfessionalsService.removeProfessionalFromService(viewer, serviceId, professionalId);
+	} catch (error) {
+		const customError = new Error(error.message || extractApiError(error));
+		customError.statusCode = error.statusCode || 500;
+		throw customError;
+	}
+}
+
 module.exports = {
 	listProfessionalsByCompany,
 	createProfessional,
@@ -152,4 +202,7 @@ module.exports = {
 	createScale,
 	listBlocksByProfessional,
 	createBlock,
+	listProfessionalsByService,
+	addProfessionalToService,
+	removeProfessionalFromService,
 };

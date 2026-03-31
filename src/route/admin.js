@@ -346,27 +346,32 @@ router.post('/admin/logout', ensureAuthenticated, (req, res, next) => {
 });
 
 router.get('/admin', ensureAuthenticated, (req, res) => {
-	res.render('backoffice/index', {
-		title: 'Administrador',
-		page: 'dashboard',
-		currentAdmin: req.session.adminUser,
-	});
+	return res.redirect('/admin/agendamentos');
 });
 
 router.get('/admin/usuarios', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para acessar o cadastro de usuarios.'), async (req, res) => {
 	try {
+		const preferredCompanyId = String(req.query.empresa_id || '').trim();
+		const userContext = await resolveUserFormContext(req, preferredCompanyId);
 		const users = await adminUsers.listUsers(req.session.adminUser.token);
 		const directory = await resolveCompaniesDirectory(req.session.adminUser.token);
 		const decoratedUsers = users.map((user) => ({
 			...user,
 			empresa_nome: resolveCompanyName(directory.companyById, user.empresa_id),
 		}));
+		const filteredUsers = userContext.isMaster && userContext.selectedCompanyId
+			? decoratedUsers.filter((user) => String(user.empresa_id || '') === String(userContext.selectedCompanyId || ''))
+			: decoratedUsers;
 
 		return res.render('backoffice/users/index', {
 			title: 'Usuarios',
 			page: 'usuarios',
 			currentAdmin: req.session.adminUser,
-			users: decoratedUsers,
+			users: filteredUsers,
+			activeCompanies: userContext.activeCompanies,
+			selectedCompanyId: userContext.selectedCompanyId,
+			selectedCompanyName: userContext.selectedCompanyName,
+			isMaster: userContext.isMaster,
 		});
 	} catch (error) {
 		req.session.flashMessage = {
@@ -379,7 +384,10 @@ router.get('/admin/usuarios', ensureRoles(adminPermissions.modules.masterAdmin, 
 
 router.get('/admin/usuarios/novo', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para acessar o cadastro de usuarios.'), async (req, res) => {
 	const userForm = buildUserForm();
-	if (req.session.adminUser.role !== 'master') {
+	const preferredCompanyId = String(req.query.empresa_id || '').trim();
+	if (req.session.adminUser.role === 'master') {
+		userForm.empresa_id = preferredCompanyId;
+	} else {
 		userForm.empresa_id = currentAdminCompanyId(req);
 	}
 
@@ -678,6 +686,73 @@ router.patch('/admin/api/categorias/:id', ensureRoles(adminPermissions.modules.m
 	}
 });
 
+router.get('/admin/api/servicos/:id', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para acessar servicos.'), async (req, res) => {
+	try {
+		const service = await adminServices.getServiceById(req.session.adminUser.token, req.params.id);
+		return res.json(service);
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message });
+	}
+});
+
+router.patch('/admin/api/servicos/:id', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para atualizar servicos.'), async (req, res) => {
+	const nome = String(req.body.nome || '').trim();
+	const preco = Number(req.body.preco || 0);
+	const duracao_minutos = Number(req.body.duracao_minutos || 0);
+	const categoria_id = String(req.body.categoria_id || '').trim();
+	const ativo = req.body.ativo !== undefined ? req.body.ativo : true;
+
+	if (!nome || !preco || !duracao_minutos || !categoria_id) {
+		return res.status(422).json({ message: 'Informe nome, preco, duracao e categoria do servico.' });
+	}
+
+	try {
+		const updated = await adminServices.updateService(req.session.adminUser.token, req.params.id, {
+			nome,
+			preco,
+			duracao_minutos,
+			categoria_id,
+			ativo,
+		});
+		return res.json(updated);
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message });
+	}
+});
+
+router.get('/admin/api/servicos/:id/profissionais', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para consultar vinculos de servicos.'), async (req, res) => {
+	try {
+		const professionals = await adminProfessionals.listProfessionalsByService(req.session.adminUser.token, req.params.id);
+		return res.json(professionals);
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message });
+	}
+});
+
+router.post('/admin/api/servicos/:id/profissionais', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para vincular profissionais a servicos.'), async (req, res) => {
+	const profissionalId = String(req.body.profissional_id || '').trim();
+
+	if (!profissionalId) {
+		return res.status(422).json({ message: 'Informe o profissional para vincular ao servico.' });
+	}
+
+	try {
+		const payload = await adminProfessionals.addProfessionalToService(req.session.adminUser.token, req.params.id, profissionalId);
+		return res.status(201).json(payload);
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message });
+	}
+});
+
+router.delete('/admin/api/servicos/:id/profissionais/:profissional_id', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para remover vinculos de profissionais.'), async (req, res) => {
+	try {
+		const payload = await adminProfessionals.removeProfessionalFromService(req.session.adminUser.token, req.params.id, req.params.profissional_id);
+		return res.json(payload);
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message });
+	}
+});
+
 router.get('/admin/servicos', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para acessar o cadastro de servicos.'), async (req, res) => {
 	try {
 		const serviceContext = await resolveServiceContext(req, req.query.empresa_id);
@@ -777,7 +852,17 @@ router.post('/admin/servicos', ensureRoles(adminPermissions.modules.masterAdmin,
 	}
 
 	try {
-		await adminServices.createService(req.session.adminUser.token, serviceForm);
+		const createdService = await adminServices.createService(req.session.adminUser.token, serviceForm);
+		const professionalIds = Array.isArray(req.body.profissional_ids)
+			? req.body.profissional_ids
+			: (req.body.profissional_ids ? [req.body.profissional_ids] : []);
+
+		if (createdService?.id) {
+			for (const professionalId of professionalIds.map((item) => String(item || '').trim()).filter(Boolean)) {
+				await adminProfessionals.addProfessionalToService(req.session.adminUser.token, createdService.id, professionalId);
+			}
+		}
+
 		req.session.flashMessage = {
 			type: 'success',
 			text: 'Servico criado com sucesso.',
