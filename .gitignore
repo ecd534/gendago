@@ -9,3 +9,5 @@ migration/
 docs/tmp/*
 coverage/
 .eslintcache
+playwright-report/
+test-results/
