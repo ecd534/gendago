@@ -198,21 +198,19 @@ async function resolveProfessionalContext(req, preferredCompanyId) {
 	};
 }
 
-async function resolveAppointmentContext(req, preferredCompanyId, date, filters = {}) {
+async function resolveAppointmentContext(req, preferredCompanyId, date) {
 	const role = req.session.adminUser.role;
 	const token = req.session.adminUser.token;
 	const activeCompanies = role === 'master' ? await adminCompanies.listActiveCompanies(token) : [];
 	const companyId = role === 'master'
 		? String(preferredCompanyId || '').trim() || (activeCompanies[0] ? activeCompanies[0].id : '')
 		: currentAdminCompanyId(req);
-	const appointments = companyId ? await adminAgendamentos.listByDateWithFilters(token, companyId, date, filters) : [];
-	const professionals = companyId ? await adminAgendamentos.getProfessionalsByCompany(token, companyId) : [];
+	const appointments = companyId ? await adminAgendamentos.listByDate(token, companyId, date) : [];
 
 	return {
 		activeCompanies,
 		companyId,
 		appointments,
-		professionals,
 	};
 }
 
@@ -1442,18 +1440,8 @@ router.get('/admin/agendamentos', ensureRoles(adminPermissions.modules.masterAdm
 	const date = String(req.query.data || today).slice(0, 10) || today;
 	const preferredCompanyId = String(req.query.empresa_id || '').trim();
 
-	// Parse filters
-	const statusFilter = req.query.status
-		? (Array.isArray(req.query.status) ? req.query.status : [req.query.status])
-		: [];
-	const professionalFilter = String(req.query.profissional || '').trim();
-
 	try {
-		const filters = {
-			status: statusFilter,
-			profissional_id: professionalFilter,
-		};
-		const context = await resolveAppointmentContext(req, preferredCompanyId, date, filters);
+		const context = await resolveAppointmentContext(req, preferredCompanyId, date);
 		const companiesById = new Map(context.activeCompanies.map((c) => [c.id, c]));
 
 		return res.render('backoffice/agendamentos/index', {
@@ -1462,12 +1450,10 @@ router.get('/admin/agendamentos', ensureRoles(adminPermissions.modules.masterAdm
 			currentAdmin: req.session.adminUser,
 			appointments: context.appointments,
 			activeCompanies: context.activeCompanies,
-			professionals: context.professionals,
 			selectedCompanyId: context.companyId,
 			selectedCompanyName: resolveSessionCompanyName(req, companiesById, context.companyId),
 			selectedDate: date,
 			isMaster: req.session.adminUser.role === 'master',
-			filters,
 		});
 	} catch (error) {
 		req.session.flashMessage = {
@@ -1485,19 +1471,9 @@ router.get('/admin/api/agendamentos', ensureRoles(adminPermissions.modules.maste
 		? String(req.query.empresa_id || '').trim()
 		: currentAdminCompanyId(req);
 
-	// Parse filters
-	const statusFilter = req.query.status
-		? (Array.isArray(req.query.status) ? req.query.status : [req.query.status])
-		: [];
-	const professionalFilter = String(req.query.profissional || '').trim();
-
 	try {
-		const filters = {
-			status: statusFilter,
-			profissional_id: professionalFilter,
-		};
-		const context = await resolveAppointmentContext(req, preferredCompanyId, date, filters);
-		return res.json({ appointments: context.appointments, companyId: context.companyId, professionals: context.professionals });
+		const context = await resolveAppointmentContext(req, preferredCompanyId, date);
+		return res.json({ appointments: context.appointments, companyId: context.companyId });
 	} catch (error) {
 		return res.status(error.statusCode || 500).json({ message: error.message });
 	}
