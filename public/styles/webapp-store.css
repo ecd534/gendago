@@ -31,6 +31,18 @@ body {
 	border-bottom: 1px solid var(--store-stroke);
 }
 
+.store-company-logo {
+	width: 64px;
+	height: 64px;
+	object-fit: contain;
+	border-radius: 14px;
+	border: 1px solid var(--store-stroke);
+	background: #fff;
+	padding: 0.25rem;
+	flex-shrink: 0;
+	margin-left: auto;
+}
+
 .store-anchor-nav {
 	background: rgba(255, 255, 255, 0.66);
 	border-color: var(--store-stroke) !important;

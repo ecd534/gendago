@@ -9,7 +9,11 @@
 	<link rel="stylesheet" href="/styles/admin.css">
 </head>
 <body>
-	<div class="container-fluid backoffice-shell">
+	<div class="container-fluid backoffice-shell" id="user-page"
+		data-create-user-endpoint="/admin/api/usuarios"
+		data-user-detail-endpoint-template="/admin/api/usuarios/__USER_ID__"
+		data-user-update-endpoint-template="/admin/api/usuarios/__USER_ID__"
+		data-selected-company-id="<%= selectedCompanyId || '' %>">
 		<div class="row min-vh-100">
 			<%- include('../partials/sidebar', { currentAdmin, page }) %>
 
@@ -40,7 +44,7 @@
 									<input type="text" class="form-control admin-input" value="<%= selectedCompanyName || 'Empresa nao vinculada' %>" readonly>
 								</div>
 							<% } %>
-							<a href="/admin/usuarios/novo<%= selectedCompanyId ? `?empresa_id=${encodeURIComponent(selectedCompanyId)}` : '' %>" class="btn btn-dark rounded-pill px-4">Novo usuario</a>
+							<button type="button" class="btn btn-dark rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createUserModal">Novo usuario</button>
 						</div>
 					</div>
 				</section>
@@ -79,11 +83,13 @@
 										</td>
 										<td data-label="Acoes">
 											<div class="d-flex justify-content-end gap-2 flex-wrap">
-												<a href="/admin/usuarios/<%= user.id %>/editar" class="btn btn-sm btn-outline-dark rounded-pill">Editar</a>
-												<form action="/admin/usuarios/<%= user.id %>/status" method="post">
-													<input type="hidden" name="ativo" value="<%= user.ativo ? 'false' : 'true' %>">
-													<button type="submit" class="btn btn-sm rounded-pill <%= user.ativo ? 'btn-outline-danger' : 'btn-outline-success' %>"><%= user.ativo ? 'Inativar' : 'Ativar' %></button>
-												</form>
+												<button type="button" class="btn btn-sm btn-outline-dark rounded-pill manage-user-button"
+													data-bs-toggle="modal"
+													data-bs-target="#manageUserModal"
+													data-user-id="<%= user.id %>"
+													data-user-name="<%- user.nome %>">
+													Gerenciar
+												</button>
 											</div>
 										</td>
 									</tr>
@@ -95,6 +101,320 @@
 			</main>
 		</div>
 	</div>
+
+	<div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-lg">
+			<div class="modal-content border-0 rounded-4">
+				<div class="modal-header border-0 pb-0">
+					<div>
+						<h2 class="modal-title h4 mb-1" id="createUserModalLabel">Novo usuario</h2>
+						<p class="text-secondary mb-0">Cadastre usuario e perfil sem sair da listagem.</p>
+					</div>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+				</div>
+				<div class="modal-body pt-4">
+					<div id="create-user-feedback" class="alert d-none rounded-4 border-0" role="alert"></div>
+					<form id="create-user-form" class="row g-3">
+						<div class="col-12 col-md-6">
+							<label class="form-label fw-semibold" for="new-user-name">Nome</label>
+							<input class="form-control admin-input" id="new-user-name" name="nome" required>
+						</div>
+						<div class="col-12 col-md-6">
+							<label class="form-label fw-semibold" for="new-user-email">E-mail</label>
+							<input type="email" class="form-control admin-input" id="new-user-email" name="email" required>
+						</div>
+						<div class="col-12 col-md-4">
+							<label class="form-label fw-semibold" for="new-user-level">Perfil</label>
+							<select class="form-select admin-input" id="new-user-level" name="nivel" required>
+								<% (levelOptions || []).forEach((level) => { %>
+									<option value="<%= level %>"><%= level %></option>
+								<% }) %>
+							</select>
+						</div>
+						<div class="col-12 col-md-4">
+							<label class="form-label fw-semibold" for="new-user-password">Senha</label>
+							<input type="password" minlength="6" class="form-control admin-input" id="new-user-password" name="senha" required>
+						</div>
+						<div class="col-12 col-md-4">
+							<label class="form-label fw-semibold" for="new-user-active">Status</label>
+							<select class="form-select admin-input" id="new-user-active" name="ativo">
+								<option value="true" selected>Ativo</option>
+								<option value="false">Inativo</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<% if (isMaster) { %>
+								<label class="form-label fw-semibold" for="new-user-company">Empresa</label>
+								<select class="form-select admin-input" id="new-user-company" name="empresa_id" required>
+									<option value="">Selecione uma empresa</option>
+									<% (activeCompanies || []).forEach((company) => { %>
+										<option value="<%= company.id %>" <%= String(selectedCompanyId || '') === String(company.id || '') ? 'selected' : '' %>><%= company.nome %></option>
+									<% }) %>
+								</select>
+							<% } else { %>
+								<input type="hidden" name="empresa_id" value="<%= selectedCompanyId || '' %>">
+								<label class="form-label fw-semibold">Empresa</label>
+								<input class="form-control admin-input" value="<%= selectedCompanyName || 'Empresa nao vinculada' %>" readonly>
+							<% } %>
+						</div>
+						<div class="col-12 d-flex justify-content-end gap-2 pt-2">
+							<button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+							<button type="submit" class="btn btn-dark rounded-pill px-4">Criar usuario</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal fade" id="manageUserModal" tabindex="-1" aria-labelledby="manageUserModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-lg">
+			<div class="modal-content border-0 rounded-4">
+				<div class="modal-header border-0 pb-0">
+					<div>
+						<h2 class="modal-title h4 mb-1" id="manageUserModalLabel">Gerenciar usuario</h2>
+						<p class="text-secondary mb-0" id="manageUserSubtitle">Atualize dados e perfil do usuario selecionado.</p>
+					</div>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+				</div>
+				<div class="modal-body pt-4">
+					<div id="manage-user-feedback" class="alert d-none rounded-4 border-0" role="alert"></div>
+					<form id="manage-user-form" class="row g-3">
+						<div class="col-12 col-md-6">
+							<label class="form-label fw-semibold" for="manage-user-name">Nome</label>
+							<input class="form-control admin-input" id="manage-user-name" name="nome" required>
+						</div>
+						<div class="col-12 col-md-6">
+							<label class="form-label fw-semibold" for="manage-user-email">E-mail</label>
+							<input type="email" class="form-control admin-input" id="manage-user-email" name="email" required>
+						</div>
+						<div class="col-12 col-md-4">
+							<label class="form-label fw-semibold" for="manage-user-level">Perfil</label>
+							<select class="form-select admin-input" id="manage-user-level" name="nivel" required>
+								<% (levelOptions || []).forEach((level) => { %>
+									<option value="<%= level %>"><%= level %></option>
+								<% }) %>
+							</select>
+						</div>
+						<div class="col-12 col-md-4">
+							<label class="form-label fw-semibold" for="manage-user-password">Senha</label>
+							<input type="password" minlength="6" class="form-control admin-input" id="manage-user-password" name="senha">
+							<div class="form-text">Preencha apenas se desejar trocar a senha.</div>
+						</div>
+						<div class="col-12 col-md-4">
+							<label class="form-label fw-semibold" for="manage-user-active">Status</label>
+							<select class="form-select admin-input" id="manage-user-active" name="ativo">
+								<option value="true">Ativo</option>
+								<option value="false">Inativo</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<% if (isMaster) { %>
+								<label class="form-label fw-semibold" for="manage-user-company">Empresa</label>
+								<select class="form-select admin-input" id="manage-user-company" name="empresa_id">
+									<option value="">Global (sem empresa)</option>
+									<% (activeCompanies || []).forEach((company) => { %>
+										<option value="<%= company.id %>"><%= company.nome %></option>
+									<% }) %>
+								</select>
+							<% } else { %>
+								<input type="hidden" name="empresa_id" value="<%= selectedCompanyId || '' %>">
+								<label class="form-label fw-semibold">Empresa</label>
+								<input class="form-control admin-input" value="<%= selectedCompanyName || 'Empresa nao vinculada' %>" readonly>
+							<% } %>
+						</div>
+						<div class="col-12 d-flex justify-content-end gap-2 pt-2">
+							<button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+							<button type="submit" class="btn btn-dark rounded-pill px-4">Salvar alteracoes</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
 	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
+	<script>
+		(function () {
+			const page = document.getElementById('user-page');
+			if (!page) {
+				return;
+			}
+
+			const createUserForm = document.getElementById('create-user-form');
+			const createFeedback = document.getElementById('create-user-feedback');
+			const manageUserForm = document.getElementById('manage-user-form');
+			const manageFeedback = document.getElementById('manage-user-feedback');
+			const manageSubtitle = document.getElementById('manageUserSubtitle');
+
+			let selectedUserId = '';
+
+			function setFeedback(element, type, text) {
+				if (!element) {
+					return;
+				}
+
+				if (!text) {
+					element.className = 'alert d-none rounded-4 border-0';
+					element.textContent = '';
+					return;
+				}
+
+				element.className = `alert alert-${type} rounded-4 border-0`;
+				element.textContent = text;
+			}
+
+			function parseResponse(response) {
+				return response.text().then((text) => {
+					try {
+						return text ? JSON.parse(text) : {};
+					} catch (error) {
+						return { message: text || 'Resposta invalida da API.' };
+					}
+				});
+			}
+
+			function endpointFromTemplate(template, userId) {
+				return String(template || '').replace('__USER_ID__', encodeURIComponent(userId));
+			}
+
+			if (createUserForm) {
+				createUserForm.addEventListener('submit', async (event) => {
+					event.preventDefault();
+					setFeedback(createFeedback, null, '');
+
+					const formData = new FormData(createUserForm);
+					const payload = {
+						nome: String(formData.get('nome') || '').trim(),
+						email: String(formData.get('email') || '').trim(),
+						nivel: String(formData.get('nivel') || '').trim(),
+						senha: String(formData.get('senha') || ''),
+						ativo: String(formData.get('ativo') || 'true') === 'true',
+						empresa_id: String(formData.get('empresa_id') || page.dataset.selectedCompanyId || '').trim(),
+					};
+
+					if (!payload.nome || !payload.email || !payload.nivel || payload.senha.length < 6) {
+						setFeedback(createFeedback, 'warning', 'Preencha nome, email, perfil e uma senha com no minimo 6 caracteres.');
+						return;
+					}
+
+					try {
+						const response = await fetch(page.dataset.createUserEndpoint, {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								Accept: 'application/json',
+							},
+							body: JSON.stringify(payload),
+						});
+
+						const result = await parseResponse(response);
+						if (!response.ok) {
+							throw new Error(result.message || 'Nao foi possivel criar o usuario.');
+						}
+
+						setFeedback(createFeedback, 'success', 'Usuario criado com sucesso.');
+						setTimeout(() => {
+							window.location.reload();
+						}, 400);
+					} catch (error) {
+						setFeedback(createFeedback, 'danger', error.message || 'Nao foi possivel criar o usuario.');
+					}
+				});
+			}
+
+			document.querySelectorAll('.manage-user-button').forEach((button) => {
+				button.addEventListener('click', async () => {
+					selectedUserId = button.dataset.userId || '';
+					const userName = button.dataset.userName || 'Usuario';
+					manageSubtitle.textContent = `Atualize dados e perfil de ${userName}.`;
+					setFeedback(manageFeedback, null, '');
+
+					try {
+						const detailEndpoint = endpointFromTemplate(page.dataset.userDetailEndpointTemplate, selectedUserId);
+						const response = await fetch(detailEndpoint, { headers: { Accept: 'application/json' } });
+						const result = await parseResponse(response);
+
+						if (!response.ok) {
+							throw new Error(result.message || 'Nao foi possivel carregar o usuario.');
+						}
+
+						manageUserForm.querySelector('#manage-user-name').value = result.nome || '';
+						manageUserForm.querySelector('#manage-user-email').value = result.email || '';
+						manageUserForm.querySelector('#manage-user-level').value = result.nivel || 'agente';
+						manageUserForm.querySelector('#manage-user-password').value = '';
+						manageUserForm.querySelector('#manage-user-active').value = result.ativo ? 'true' : 'false';
+
+						const companySelect = manageUserForm.querySelector('#manage-user-company');
+						if (companySelect) {
+							companySelect.value = result.empresa_id || '';
+						}
+					} catch (error) {
+						setFeedback(manageFeedback, 'danger', error.message || 'Nao foi possivel carregar o usuario.');
+					}
+				});
+			});
+
+			if (manageUserForm) {
+				manageUserForm.addEventListener('submit', async (event) => {
+					event.preventDefault();
+					setFeedback(manageFeedback, null, '');
+
+					if (!selectedUserId) {
+						setFeedback(manageFeedback, 'warning', 'Selecione um usuario para gerenciar.');
+						return;
+					}
+
+					const formData = new FormData(manageUserForm);
+					const payload = {
+						nome: String(formData.get('nome') || '').trim(),
+						email: String(formData.get('email') || '').trim(),
+						nivel: String(formData.get('nivel') || '').trim(),
+						senha: String(formData.get('senha') || ''),
+						ativo: String(formData.get('ativo') || 'true') === 'true',
+						empresa_id: String(formData.get('empresa_id') || page.dataset.selectedCompanyId || '').trim(),
+					};
+
+					if (!payload.senha) {
+						delete payload.senha;
+					}
+
+					if (!payload.nome || !payload.email || !payload.nivel) {
+						setFeedback(manageFeedback, 'warning', 'Preencha nome, email e perfil para continuar.');
+						return;
+					}
+
+					if (payload.senha && payload.senha.length < 6) {
+						setFeedback(manageFeedback, 'warning', 'Quando informada, a senha deve ter no minimo 6 caracteres.');
+						return;
+					}
+
+					try {
+						const updateEndpoint = endpointFromTemplate(page.dataset.userUpdateEndpointTemplate, selectedUserId);
+						const response = await fetch(updateEndpoint, {
+							method: 'PATCH',
+							headers: {
+								'Content-Type': 'application/json',
+								Accept: 'application/json',
+							},
+							body: JSON.stringify(payload),
+						});
+
+						const result = await parseResponse(response);
+						if (!response.ok) {
+							throw new Error(result.message || 'Nao foi possivel atualizar o usuario.');
+						}
+
+						setFeedback(manageFeedback, 'success', 'Usuario atualizado com sucesso.');
+						setTimeout(() => {
+							window.location.reload();
+						}, 400);
+					} catch (error) {
+						setFeedback(manageFeedback, 'danger', error.message || 'Nao foi possivel atualizar o usuario.');
+					}
+				});
+			}
+		}());
+	</script>
 </body>
 </html>

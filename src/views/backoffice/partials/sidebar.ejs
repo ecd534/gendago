@@ -26,6 +26,11 @@
 
 		<div class="glass-card p-3 mb-4 sidebar-session-card">
 			<div class="small text-uppercase text-secondary fw-semibold mb-1">Sessao atual</div>
+			<% if (currentAdmin && currentAdmin.empresa_logo) { %>
+				<div class="sidebar-company-logo-wrap mb-2">
+					<img src="<%= currentAdmin.empresa_logo %>" alt="Logo da empresa" class="sidebar-company-logo">
+				</div>
+			<% } %>
 			<div class="fw-semibold"><%= currentAdmin ? currentAdmin.name : 'Administrador' %></div>
 			<div class="text-secondary text-capitalize company-name-text"><%= currentAdmin ? (currentAdmin.empresa_nome || 'Sem empresa vinculada') : 'sem Empresa' %></div>
 			<div class="small text-secondary text-capitalize"><%= currentAdmin ? currentAdmin.role : 'sem perfil' %></div>

@@ -9,7 +9,7 @@ const sidebarItems = [
 	{ key: 'usuarios', label: 'Usuarios e Perfis', href: '/admin/usuarios', roles: modules.masterAdmin },
 	{ key: 'servicos-categorias', label: 'Serviços e Categorias', href: '/admin/servicos', roles: modules.masterAdmin },
 	{ key: 'profissionais-config', label: 'Gestão de Profissionais', href: '/admin/profissionais', roles: modules.masterAdmin },
-	{ key: 'empresas', label: 'Empresas', href: '/admin/empresas', roles: modules.master },
+	{ key: 'empresas', label: 'Empresas', href: '/admin/empresas', roles: modules.masterAdmin },
 	{ key: 'clientes', label: 'Clientes', href: '/admin/clientes', roles: modules.masterAdminAgente },
 ];
 

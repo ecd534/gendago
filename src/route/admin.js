@@ -62,7 +62,7 @@ function buildUserForm(data = {}) {
 		email: data.email || '',
 		nivel: data.nivel || 'agente',
 		empresa_id: data.empresa_id || '',
-		senha: '',
+		senha: data.senha || '',
 		ativo: typeof data.ativo === 'boolean' ? data.ativo : true,
 	};
 }
@@ -75,7 +75,16 @@ function buildCompanyForm(data = {}) {
 		email: data.email || '',
 		endereco: data.endereco || '',
 		status: data.status === 'Inativa' ? 'Inativa' : 'Ativa',
+		logo_empresa: data.logo_empresa || '',
 	};
+}
+
+function canManageCompany(req, companyId) {
+	if (req.session.adminUser.role === 'master') {
+		return true;
+	}
+
+	return String(companyId || '').trim() === currentAdminCompanyId(req);
 }
 
 function buildServiceForm(data = {}) {
@@ -313,11 +322,14 @@ router.post('/admin/login', async (req, res) => {
 		try {
 			const company = await adminCompanies.getCompanyById(authenticatedUser.token, authenticatedUser.empresa);
 			authenticatedUser.empresa_nome = company?.nome || authenticatedUser.empresa;
+			authenticatedUser.empresa_logo = company?.logo_empresa || '';
 		} catch (error) {
 			authenticatedUser.empresa_nome = authenticatedUser.empresa;
+			authenticatedUser.empresa_logo = '';
 		}
 	} else {
 		authenticatedUser.empresa_nome = 'Global';
+		authenticatedUser.empresa_logo = '';
 	}
 
 	req.session.adminUser = authenticatedUser;
@@ -372,6 +384,7 @@ router.get('/admin/usuarios', ensureRoles(adminPermissions.modules.masterAdmin, 
 			selectedCompanyId: userContext.selectedCompanyId,
 			selectedCompanyName: userContext.selectedCompanyName,
 			isMaster: userContext.isMaster,
+			levelOptions: getAllowedLevels(req.session.adminUser.role),
 		});
 	} catch (error) {
 		req.session.flashMessage = {
@@ -379,6 +392,75 @@ router.get('/admin/usuarios', ensureRoles(adminPermissions.modules.masterAdmin, 
 			text: 'Nao foi possivel carregar os usuarios.',
 		};
 		return res.redirect('/admin');
+	}
+});
+
+router.get('/admin/api/usuarios/:id', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para consultar usuarios.'), async (req, res) => {
+	try {
+		const user = await adminUsers.getUserById(req.session.adminUser.token, req.params.id);
+		if (!user) {
+			return res.status(404).json({ message: 'Usuario nao encontrado.' });
+		}
+
+		return res.json(user);
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message || 'Nao foi possivel carregar o usuario.' });
+	}
+});
+
+router.post('/admin/api/usuarios', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para criar usuarios.'), async (req, res) => {
+	const userForm = buildUserForm({
+		...req.body,
+		ativo: parseBoolean(req.body.ativo, true),
+	});
+
+	if (req.session.adminUser.role !== 'master') {
+		userForm.empresa_id = currentAdminCompanyId(req);
+	}
+
+	if (!userForm.nome || !userForm.email || !userForm.nivel || userForm.senha.length < 6) {
+		return res.status(422).json({ message: 'Preencha nome, email, nivel e uma senha com no minimo 6 caracteres.' });
+	}
+
+	if (!getAllowedLevels(req.session.adminUser.role).includes(userForm.nivel)) {
+		return res.status(403).json({ message: 'Voce nao pode criar usuarios com esse nivel.' });
+	}
+
+	try {
+		const user = await adminUsers.createUser(req.session.adminUser.token, userForm);
+		return res.status(201).json(user);
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message || 'Nao foi possivel criar o usuario.' });
+	}
+});
+
+router.patch('/admin/api/usuarios/:id', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para atualizar usuarios.'), async (req, res) => {
+	const userForm = buildUserForm({
+		...req.body,
+		ativo: parseBoolean(req.body.ativo, true),
+	});
+
+	if (req.session.adminUser.role !== 'master') {
+		userForm.empresa_id = currentAdminCompanyId(req);
+	}
+
+	if (!userForm.nome || !userForm.email || !userForm.nivel) {
+		return res.status(422).json({ message: 'Preencha nome, email e nivel para continuar.' });
+	}
+
+	if (userForm.senha && userForm.senha.length < 6) {
+		return res.status(422).json({ message: 'Quando informada, a senha deve ter no minimo 6 caracteres.' });
+	}
+
+	if (!getAllowedLevels(req.session.adminUser.role).includes(userForm.nivel)) {
+		return res.status(403).json({ message: 'Voce nao pode atribuir esse nivel.' });
+	}
+
+	try {
+		const user = await adminUsers.updateUser(req.session.adminUser.token, req.params.id, userForm);
+		return res.json(user);
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message || 'Nao foi possivel atualizar o usuario.' });
 	}
 });
 
@@ -1166,15 +1248,24 @@ router.patch('/admin/api/clientes/:id', ensureRoles(adminPermissions.modules.mas
 	}
 });
 
-router.get('/admin/empresas', ensureRoles(adminPermissions.modules.master, 'Voce nao tem permissao para acessar o cadastro de empresas.'), async (req, res) => {
+router.get('/admin/empresas', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para acessar o cadastro de empresas.'), async (req, res) => {
 	try {
-		const companies = await adminCompanies.listCompanies(req.session.adminUser.token);
+		const isMaster = req.session.adminUser.role === 'master';
+		let companies = [];
+
+		if (isMaster) {
+			companies = await adminCompanies.listCompanies(req.session.adminUser.token);
+		} else {
+			const ownCompany = await adminCompanies.getCompanyById(req.session.adminUser.token, currentAdminCompanyId(req));
+			companies = ownCompany && ownCompany.id ? [ownCompany] : [];
+		}
 
 		return res.render('backoffice/companies/index', {
 			title: 'Empresas',
 			page: 'empresas',
 			currentAdmin: req.session.adminUser,
 			companies,
+			canCreateCompany: isMaster,
 		});
 	} catch (error) {
 		req.session.flashMessage = {
@@ -1182,6 +1273,73 @@ router.get('/admin/empresas', ensureRoles(adminPermissions.modules.master, 'Voce
 			text: 'Nao foi possivel carregar as empresas.',
 		};
 		return res.redirect('/admin');
+	}
+});
+
+router.get('/admin/api/empresas/:id', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para consultar empresas.'), async (req, res) => {
+	if (!canManageCompany(req, req.params.id)) {
+		return res.status(403).json({ message: 'Voce nao pode consultar esta empresa.' });
+	}
+
+	try {
+		const company = await adminCompanies.getCompanyById(req.session.adminUser.token, req.params.id);
+		if (!company || !company.id) {
+			return res.status(404).json({ message: 'Empresa nao encontrada.' });
+		}
+
+		return res.json(company);
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message || 'Nao foi possivel carregar a empresa.' });
+	}
+});
+
+router.patch('/admin/api/empresas/:id', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para atualizar empresas.'), async (req, res) => {
+	if (!canManageCompany(req, req.params.id)) {
+		return res.status(403).json({ message: 'Voce nao pode atualizar esta empresa.' });
+	}
+
+	const current = buildCompanyForm(req.body);
+	if (!current.nome || !current.telefone || !current.endereco) {
+		return res.status(422).json({ message: 'Preencha nome, telefone e endereco para continuar.' });
+	}
+
+	try {
+		const company = await adminCompanies.updateCompany(req.session.adminUser.token, req.params.id, current);
+
+		if (currentAdminCompanyId(req) === req.params.id) {
+			req.session.adminUser.empresa_nome = company.nome || req.session.adminUser.empresa_nome;
+			req.session.adminUser.empresa_logo = company.logo_empresa || '';
+		}
+
+		return res.json(company);
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message || 'Nao foi possivel atualizar a empresa.' });
+	}
+});
+
+router.post('/admin/api/empresas', ensureRoles(adminPermissions.modules.master, 'Voce nao tem permissao para criar empresas.'), async (req, res) => {
+	const companyForm = buildCompanyForm(req.body);
+
+	if (!companyForm.nome || !companyForm.slug || !companyForm.telefone || !companyForm.endereco) {
+		return res.status(422).json({ message: 'Preencha nome, slug, telefone e endereco para continuar.' });
+	}
+
+	try {
+		const company = await adminCompanies.createCompany(req.session.adminUser.token, companyForm);
+		return res.status(201).json(company);
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message || 'Nao foi possivel criar a empresa.' });
+	}
+});
+
+router.patch('/admin/api/empresas/:id/status', ensureRoles(adminPermissions.modules.master, 'Voce nao tem permissao para atualizar empresas.'), async (req, res) => {
+	const companyForm = buildCompanyForm(req.body);
+
+	try {
+		const company = await adminCompanies.updateCompanyStatus(req.session.adminUser.token, req.params.id, companyForm.status);
+		return res.json(company);
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message || 'Nao foi possivel atualizar o status da empresa.' });
 	}
 });
 

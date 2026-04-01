@@ -13,6 +13,7 @@ function normalizeCompany(company) {
 		email: company.email || '',
 		endereco: company.endereco || '',
 		status: normalizeStatus(company.status),
+		logo_empresa: company.logo_empresa || '',
 	};
 }
 
@@ -24,6 +25,7 @@ function buildPayload(form) {
 		email: String(form.email || '').trim() || null,
 		endereco: String(form.endereco || '').trim(),
 		status: normalizeStatus(form.status),
+		logo_empresa: String(form.logo_empresa || '').trim(),
 	};
 }
 
@@ -81,10 +83,22 @@ async function updateCompanyStatus(token, companyId, status) {
 	}
 }
 
+async function updateCompany(token, companyId, form) {
+	try {
+		const updated = await localCompaniesService.updateCompany(companyId, buildPayload(form));
+		return normalizeCompany(updated || { id: companyId, ...form });
+	} catch (error) {
+		const customError = new Error(error.message || extractApiError(error));
+		customError.statusCode = error.statusCode || 500;
+		throw customError;
+	}
+}
+
 module.exports = {
 	listCompanies,
 	listActiveCompanies,
 	getCompanyById,
 	createCompany,
+	updateCompany,
 	updateCompanyStatus,
 };

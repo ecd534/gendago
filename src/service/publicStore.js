@@ -2,6 +2,24 @@ const { query } = require('../backend/db/pool');
 const localProfessionalsService = require('../backend/domains/profissionais/service');
 const localAppointmentsService = require('../backend/domains/agendamentos/service');
 
+let logoColumnAvailable;
+
+async function logoSelectExpression() {
+	if (typeof logoColumnAvailable !== 'boolean') {
+		const result = await query(`
+			SELECT 1
+			FROM information_schema.columns
+			WHERE table_schema = 'venus'
+			  AND table_name = 'empresas'
+			  AND column_name = 'logo_empresa'
+			LIMIT 1
+		`);
+		logoColumnAvailable = Boolean(result.rows[0]);
+	}
+
+	return logoColumnAvailable ? 'logo_empresa' : 'NULL::text AS logo_empresa';
+}
+
 function normalizeText(value) {
 	return String(value || '')
 		.normalize('NFD')
@@ -45,6 +63,7 @@ function normalizeCompany(company = {}) {
 		email: String(company.email || '').trim(),
 		endereco: String(company.endereco || company.endereco_completo || '').trim(),
 		status: String(company.status || 'Ativa').trim(),
+		logo_empresa: String(company.logo_empresa || '').trim(),
 	};
 }
 
@@ -107,8 +126,9 @@ async function searchCompaniesByName(name) {
 		return [];
 	}
 
+	const logoColumn = await logoSelectExpression();
 	const result = await query(`
-		SELECT id, nome, slug, telefone, email, endereco, status
+		SELECT id, nome, slug, telefone, email, endereco, status, ${logoColumn}
 		FROM venus.empresas
 		WHERE status = 'Ativa'
 		  AND (nome ILIKE $1 OR slug ILIKE $1)
@@ -127,8 +147,9 @@ async function resolveCompanyBySlug(slug) {
 		return null;
 	}
 
+	const logoColumn = await logoSelectExpression();
 	const exact = await query(`
-		SELECT id, nome, slug, telefone, email, endereco, status
+		SELECT id, nome, slug, telefone, email, endereco, status, ${logoColumn}
 		FROM venus.empresas
 		WHERE status = 'Ativa' AND slug = $1
 		LIMIT 1
@@ -148,8 +169,9 @@ async function resolveCompanyBySlug(slug) {
 }
 
 async function getPublicVitrine(companyId) {
+	const logoColumn = await logoSelectExpression();
 	const companyResult = await query(`
-		SELECT id, nome, slug, telefone, email, endereco, status
+		SELECT id, nome, slug, telefone, email, endereco, status, ${logoColumn}
 		FROM venus.empresas
 		WHERE id = $1 AND status = 'Ativa'
 		LIMIT 1

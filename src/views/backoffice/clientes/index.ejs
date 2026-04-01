@@ -69,6 +69,10 @@
 									</tr>
 								<% } %>
 								<% clients.forEach((client) => { %>
+									<%
+										const normalizedStatus = String(client.status || 'Ativo').toLowerCase();
+										const isClientActive = normalizedStatus === 'ativo';
+									%>
 									<tr>
 										<td data-label="Cliente">
 											<div class="fw-semibold"><%= client.nome %></div>
@@ -78,7 +82,11 @@
 											<div><%= client.telefone || 'Telefone nao informado' %></div>
 											<div class="small text-secondary"><%= client.email || 'E-mail nao informado' %></div>
 										</td>
-										<td data-label="Status"><span class="badge rounded-pill text-bg-light"><%= client.status || 'Ativo' %></span></td>
+										<td data-label="Status">
+											<span class="badge rounded-pill <%= isClientActive ? 'badge-status-active' : 'badge-status-inactive' %>">
+												<%= isClientActive ? 'Ativo' : 'Inativo' %>
+											</span>
+										</td>
 										<td data-label="Acoes">
 											<div class="d-flex justify-content-end gap-2 flex-wrap">
 												<button type="button" class="btn btn-sm btn-outline-dark rounded-pill manage-client-button"
