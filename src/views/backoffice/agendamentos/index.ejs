@@ -77,6 +77,9 @@
 				<!-- Status Filter Badges -->
 				<div class="d-flex align-items-center gap-2 flex-wrap mb-4" id="status-filters-container">
 					<span class="fw-semibold text-secondary">Status</span>
+					<button class="badge bg-light text-dark rounded-pill px-3 py-2 border-0 cursor-pointer status-filter active" data-status="all">
+						Todos
+					</button>
 					<button class="badge bg-light text-dark rounded-pill px-3 py-2 border-0 cursor-pointer status-filter" data-status="agendado">
 						Agendado
 					</button>
@@ -167,7 +170,7 @@
 			if (!page) return;
 
 			const endpointTemplate = page.dataset.updateEndpointTemplate;
-			let activeStatusFilter = null;
+			let activeStatusFilter = 'all'; // Default to "all"
 
 			const statusBadgeColor = {
 				agendado: 'primary',
@@ -181,26 +184,22 @@
 				badge.addEventListener('click', function () {
 					const status = this.dataset.status;
 					
-					// Toggle active state
-					if (activeStatusFilter === status) {
-						activeStatusFilter = null;
-						badge.style.opacity = '1';
-						badge.style.fontWeight = 'normal';
-					} else {
-						// Remove previous active
-						document.querySelectorAll('.status-filter').forEach(b => {
-							b.style.opacity = '0.5';
-							b.style.fontWeight = 'normal';
-						});
-						
-						activeStatusFilter = status;
-						badge.style.opacity = '1';
-						badge.style.fontWeight = '600';
-					}
+					// Remove active class from all badges
+					document.querySelectorAll('.status-filter').forEach(b => {
+						b.classList.remove('active');
+						b.style.opacity = '0.5';
+						b.style.fontWeight = 'normal';
+					});
+					
+					// Set new active filter
+					activeStatusFilter = status;
+					this.classList.add('active');
+					this.style.opacity = '1';
+					this.style.fontWeight = '600';
 
 					// Filter cards
 					document.querySelectorAll('.appointment-card-wrap').forEach((card) => {
-						if (activeStatusFilter === null) {
+						if (activeStatusFilter === 'all') {
 							card.style.display = '';
 						} else {
 							const cardStatus = card.querySelector('.status-badge')?.textContent?.trim();
