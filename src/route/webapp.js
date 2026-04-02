@@ -341,7 +341,10 @@ router.post('/app/api/:slug/agendamentos/:appointmentId/cancelar', async (req, r
 		}
 
 		// Get the appointment to verify it belongs to the client
-		const allAppointments = await publicStore.getPublicClientAppointments(context.company.id, auth.client.id);
+		const allAppointments = await publicStore.getPublicClientAppointments({
+			empresa_id: context.company.id,
+			cliente_id: auth.client.id,
+		});
 		const appointment = allAppointments.find((apt) => String(apt.id) === appointmentId);
 		if (!appointment) {
 			return res.status(404).json({ message: 'Agendamento nao encontrado.' });
