@@ -340,27 +340,30 @@ router.post('/app/api/:slug/agendamentos/:appointmentId/cancelar', async (req, r
 			return res.status(401).json({ message: 'Cliente nao autenticado.' });
 		}
 
-		// Get the appointment to verify it belongs to the client
+		// Get the appointment to verify it belongs to the client and is in 'agendado' status
 		const allAppointments = await publicStore.getPublicClientAppointments({
 			empresa_id: context.company.id,
 			cliente_id: auth.client.id,
 		});
+
 		const appointment = allAppointments.find((apt) => String(apt.id) === appointmentId);
 		if (!appointment) {
 			return res.status(404).json({ message: 'Agendamento nao encontrado.' });
 		}
 
+		// Only allow cancellation if status is 'agendado'
+		if (String(appointment.status || '').trim() !== 'agendado') {
+			return res.status(422).json({ message: 'Nao eh possivel cancelar agendamentos com status diferente de agendado.' });
+		}
+
 		// Cancel the appointment by updating its status to "cancelado"
-		const agendamentosService = require('../backend/domains/agendamentos/service');
-		const result = await agendamentosService.updateAppointmentStatus(
-			{ nivel: 'cliente', cliente_id: auth.client.id, empresa_id: context.company.id },
-			appointmentId,
-			'cancelado'
-		);
+		// Using the repository directly to bypass admin-only checks in the service
+		const agendamentosRepository = require('../backend/domains/agendamentos/repository');
+		await agendamentosRepository.updateAppointmentStatus(appointmentId, 'cancelado');
 
 		return res.json({
 			message: 'Agendamento cancelado com sucesso.',
-			result,
+			status: 'cancelado',
 		});
 	} catch (error) {
 		return res.status(error.statusCode || 500).json({ message: error.message || 'Nao foi possivel cancelar o agendamento.' });
