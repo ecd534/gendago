@@ -90,15 +90,14 @@ app.use(session({
 // Security: CSRF protection (only for form-submitting methods)
 const csrfProtection = csrf({ cookie: false }); // Uses session instead of cookies
 
+// Apply CSRF protection globally for form requests
+app.use(csrfProtection);
+
 app.use((req, res, next) => {
 	res.locals.currentAdmin = req.session.adminUser || null;
 	res.locals.flashMessage = req.session.flashMessage || null;
 	delete req.session.flashMessage;
-	next();
-});
-
-// Apply CSRF protection to GET requests that serve forms
-app.get('*', csrfProtection, (req, res, next) => {
+	// Make CSRF token available in all responses
 	res.locals.csrfToken = req.csrfToken();
 	next();
 });
