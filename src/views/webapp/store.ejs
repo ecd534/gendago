@@ -451,6 +451,7 @@
 					const statusClass = normalizedStatus === 'cancelado'
 						? 'text-bg-danger'
 						: 'text-bg-light';
+					const canCancel = normalizedStatus === 'agendado';
 					return `
 						<article class="my-appointment-item">
 							<div class="d-flex justify-content-between align-items-start gap-2">
@@ -459,14 +460,18 @@
 									<p class="small text-secondary mb-1">${formatDate(item.data_agendamento)}</p>
 									<p class="small text-secondary mb-0">${item.profissional ? `Profissional: ${item.profissional}` : ''}</p>
 								</div>
-								<div class="text-end">
-									<span class="badge ${statusClass} border">${status}</span>
-									<p class="small fw-semibold mt-2 mb-0">${formatCurrency(item.valor)}</p>
+								<div class="text-end d-flex flex-column align-items-end gap-2">
+									<div class="d-flex gap-2 align-items-start">
+										<span class="badge ${statusClass} border">${status}</span>
+										${canCancel ? `<button type="button" class="btn btn-sm btn-outline-danger p-1 cancel-appointment-btn" data-appointment-id="${item.id || ''}" title="Cancelar agendamento" aria-label="Cancelar agendamento"><i class="bi bi-trash"></i></button>` : ''}
+									</div>
+									<p class="small fw-semibold mb-0">${formatCurrency(item.valor)}</p>
 								</div>
 							</div>
 						</article>
 					`;
 				}).join('');
+			}
 			}
 
 			async function loadMyAppointments() {
@@ -749,6 +754,46 @@
 					}, 3000);
 				} catch (error) {
 					setFeedback('danger', error.message);
+				}
+			});
+
+			// Handle appointment cancellation
+			myAppointmentsList?.addEventListener('click', async (event) => {
+				const cancelButton = event.target.closest('.cancel-appointment-btn');
+				if (!cancelButton) {
+					return;
+				}
+
+				const appointmentId = cancelButton.dataset.appointmentId;
+				if (!appointmentId) {
+					return;
+				}
+
+				if (!confirm('Tem certeza que deseja cancelar este agendamento?')) {
+					return;
+				}
+
+				try {
+					cancelButton.disabled = true;
+					const cancelUrl = `/app/api/${slug}/agendamentos/${encodeURIComponent(appointmentId)}/cancelar`;
+					const response = await fetch(cancelUrl, {
+						method: 'POST',
+						headers: { Accept: 'application/json' },
+					});
+
+					const result = await parseResponse(response);
+					if (!response.ok) {
+						throw new Error(result.message || 'Nao foi possivel cancelar o agendamento.');
+					}
+
+					setAuthFeedback('success', 'Agendamento cancelado com sucesso. Atualizando...');
+					setTimeout(() => {
+						loadMyAppointments();
+						setAuthFeedback(null, '');
+					}, 1000);
+				} catch (error) {
+					setAuthFeedback('danger', error.message);
+					cancelButton.disabled = false;
 				}
 			});
 

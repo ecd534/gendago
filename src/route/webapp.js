@@ -323,4 +323,45 @@ router.post('/app/api/:slug/agendamentos/confirmar', async (req, res) => {
 	}
 });
 
+router.post('/app/api/:slug/agendamentos/:appointmentId/cancelar', async (req, res) => {
+	const appointmentId = String(req.params.appointmentId || '').trim();
+	if (!appointmentId) {
+		return res.status(422).json({ message: 'ID do agendamento nao informado.' });
+	}
+
+	try {
+		const context = await resolveStoreContext(req.params.slug);
+		if (!context) {
+			return res.status(404).json({ message: 'Loja nao encontrada.' });
+		}
+
+		const auth = await resolveAuthenticatedClient(req, context.company.id);
+		if (!auth?.client?.id) {
+			return res.status(401).json({ message: 'Cliente nao autenticado.' });
+		}
+
+		// Get the appointment to verify it belongs to the client
+		const allAppointments = await publicStore.getPublicClientAppointments(context.company.id, auth.client.id);
+		const appointment = allAppointments.find((apt) => String(apt.id) === appointmentId);
+		if (!appointment) {
+			return res.status(404).json({ message: 'Agendamento nao encontrado.' });
+		}
+
+		// Cancel the appointment by updating its status to "cancelado"
+		const agendamentosService = require('../backend/domains/agendamentos/service');
+		const result = await agendamentosService.updateAppointmentStatus(
+			{ nivel: 'cliente', cliente_id: auth.client.id, empresa_id: context.company.id },
+			appointmentId,
+			'cancelado'
+		);
+
+		return res.json({
+			message: 'Agendamento cancelado com sucesso.',
+			result,
+		});
+	} catch (error) {
+		return res.status(error.statusCode || 500).json({ message: error.message || 'Nao foi possivel cancelar o agendamento.' });
+	}
+});
+
 module.exports = router;
