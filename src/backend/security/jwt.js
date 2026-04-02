@@ -1,9 +1,13 @@
 const jwt = require('jsonwebtoken');
 
-const SECRET_KEY = process.env.SECRET_KEY || 'your-super-secret-key-change-in-production';
+const SECRET_KEY = process.env.SECRET_KEY;
+if (!SECRET_KEY && process.env.NODE_ENV === 'production') {
+	throw new Error('SECRET_KEY environment variable is required in production');
+}
+
 const ALGORITHM = 'HS256';
-const ACCESS_TOKEN_EXPIRE_MINUTES = 480;
-const CLIENT_ACCESS_TOKEN_EXPIRE_MINUTES = 480;
+const ACCESS_TOKEN_EXPIRE_MINUTES = SECRET_KEY ? 30 : 480;  // 30 min in prod, 8h in dev
+const CLIENT_ACCESS_TOKEN_EXPIRE_MINUTES = SECRET_KEY ? 60 : 480;  // 1h in prod, 8h in dev
 
 function createAccessToken({ usuarioId, email, nivel, empresaId, expiresInMinutes = ACCESS_TOKEN_EXPIRE_MINUTES }) {
 	const nowSeconds = Math.floor(Date.now() / 1000);

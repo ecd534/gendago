@@ -6,8 +6,14 @@ function getDatabaseCredential(name, fallback = '') {
 		return value;
 	}
 
-	if (String(process.env.NODE_ENV || '').trim().toLowerCase() === 'production') {
+	const isProduction = String(process.env.NODE_ENV || '').trim().toLowerCase() === 'production';
+	if (isProduction) {
 		throw new Error(`Variavel de ambiente obrigatoria ausente: ${name}`);
+	}
+
+	// Log warnings for weak defaults in development
+	if ((name === 'DB_USER' || name === 'DB_PASSWORD') && fallback) {
+		console.warn(`⚠️  [Database] Using weak default for ${name}. Set environment variable for production.`);
 	}
 
 	return fallback;

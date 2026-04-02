@@ -1,4 +1,5 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 
 const publicStore = require('../service/publicStore');
 const clientesService = require('../backend/domains/clientes/service');
@@ -7,6 +8,16 @@ const { createClientAccessToken, verifyClientAccessToken } = require('../backend
 const router = express.Router();
 const CLIENT_COOKIE_NAME = 'cliente_session';
 const CLIENT_COOKIE_MAX_AGE_MS = 1000 * 60 * 60 * 8;
+
+// Rate limiting for authentication endpoints (brute-force protection)
+const authLimiter = rateLimit({
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	max: 5, // 5 attempts per ip
+	message: 'Muitas tentativas de login. Tente novamente em 15 minutos.',
+	standardHeaders: true, // Returns rate limit info in `RateLimit-*` headers
+	legacyHeaders: false, // Disable `X-RateLimit-*` headers
+	skip: (req) => process.env.NODE_ENV !== 'production', // Skip rate limiting in development
+});
 
 function buildDatetime(data, hora) {
 	const date = String(data || '').trim();
@@ -130,7 +141,7 @@ router.get('/app/:slug', async (req, res) => {
 	}
 });
 
-router.post('/app/api/:slug/auth/login', async (req, res) => {
+router.post('/app/api/:slug/auth/login', authLimiter, async (req, res) => {
 	const identifier = String(req.body.email_ou_telefone || req.body.identificador || '').trim();
 	const password = String(req.body.senha || '').trim();
 
@@ -168,7 +179,7 @@ router.post('/app/api/:slug/auth/login', async (req, res) => {
 	}
 });
 
-router.post('/app/api/:slug/auth/cadastro', async (req, res) => {
+router.post('/app/api/:slug/auth/cadastro', authLimiter, async (req, res) => {
 	try {
 		const context = await resolveStoreContext(req.params.slug);
 		if (!context) {
