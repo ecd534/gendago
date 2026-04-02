@@ -8,6 +8,23 @@
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 	<link rel="stylesheet" href="/styles/admin.css">
+	<style>
+		.status-filter {
+			opacity: 0.5;
+			transition: all 0.2s ease;
+			cursor: pointer;
+			font-size: 0.9rem;
+		}
+
+		.status-filter:hover {
+			opacity: 0.7 !important;
+		}
+
+		.status-filter.active {
+			opacity: 1;
+			font-weight: 600;
+		}
+	</style>
 </head>
 <body>
 	<div class="container-fluid backoffice-shell" id="agendamentos-page"
@@ -60,6 +77,25 @@
 				<% if (locals.flashMessage) { %>
 					<div class="alert alert-<%= flashMessage.type %> border-0 rounded-4 mb-4" role="alert"><%= flashMessage.text %></div>
 				<% } %>
+
+				<!-- Status Filter Badges -->
+				<div class="glass-card p-3 p-xl-4 mb-4">
+					<div class="d-flex align-items-center gap-2 flex-wrap">
+						<span class="fw-semibold text-secondary">Status</span>
+						<button class="badge bg-light text-dark rounded-pill px-3 py-2 border-0 cursor-pointer status-filter" data-status="agendado">
+							Agendado
+						</button>
+						<button class="badge bg-light text-dark rounded-pill px-3 py-2 border-0 cursor-pointer status-filter" data-status="confirmado">
+							Confirmado
+						</button>
+						<button class="badge bg-light text-dark rounded-pill px-3 py-2 border-0 cursor-pointer status-filter" data-status="concluido">
+							Concluído
+						</button>
+						<button class="badge bg-light text-dark rounded-pill px-3 py-2 border-0 cursor-pointer status-filter" data-status="cancelado">
+							Cancelado
+						</button>
+					</div>
+				</div>
 
 				<% if (!appointments.length) { %>
 					<section class="glass-card p-4 text-center text-secondary">
@@ -133,6 +169,7 @@
 			if (!page) return;
 
 			const endpointTemplate = page.dataset.updateEndpointTemplate;
+			let activeStatusFilter = null;
 
 			const statusBadgeColor = {
 				agendado: 'primary',
@@ -140,6 +177,40 @@
 				concluido: 'secondary',
 				cancelado: 'danger',
 			};
+
+			// Status filter badges
+			document.querySelectorAll('.status-filter').forEach((badge) => {
+				badge.addEventListener('click', function () {
+					const status = this.dataset.status;
+					
+					// Toggle active state
+					if (activeStatusFilter === status) {
+						activeStatusFilter = null;
+						badge.style.opacity = '1';
+						badge.style.fontWeight = 'normal';
+					} else {
+						// Remove previous active
+						document.querySelectorAll('.status-filter').forEach(b => {
+							b.style.opacity = '0.5';
+							b.style.fontWeight = 'normal';
+						});
+						
+						activeStatusFilter = status;
+						badge.style.opacity = '1';
+						badge.style.fontWeight = '600';
+					}
+
+					// Filter cards
+					document.querySelectorAll('.appointment-card-wrap').forEach((card) => {
+						if (activeStatusFilter === null) {
+							card.style.display = '';
+						} else {
+							const cardStatus = card.querySelector('.status-badge')?.textContent?.trim();
+							card.style.display = (cardStatus === activeStatusFilter) ? '' : 'none';
+						}
+					});
+				});
+			});
 
 			document.querySelectorAll('.appointment-card-wrap').forEach((wrap) => {
 				const id = wrap.dataset.id;
