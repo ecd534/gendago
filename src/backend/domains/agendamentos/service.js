@@ -257,6 +257,7 @@ async function listPublicClientAppointments(input) {
 
 	const appointments = await repository.listPublicAppointmentsByClient(companyId, clientId, 5);
 	return appointments.map((item) => ({
+		id: item.id,
 		ticket_id: `ATD-${String(item.id || '').split('-')[0].toUpperCase()}`,
 		status: item.status,
 		servico: item.servico,
