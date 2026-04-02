@@ -11,3 +11,4 @@ coverage/
 .eslintcache
 playwright-report/
 test-results/
+mcp.json
