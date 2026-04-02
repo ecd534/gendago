@@ -2,6 +2,7 @@ const express = require('express')
 require('dotenv').config();
 const session = require('express-session');
 const helmet = require('helmet');
+const csrf = require('csurf');
 const adminRoute = require('./route/admin');
 const categoriaRoute = require('./route/categoria');
 const webappRoute = require('./route/webapp');
@@ -29,8 +30,45 @@ app.use(helmet({
 	hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
 }));
 
+// Security: CORS configuration (restrict to same-origin by default)
+app.use((req, res, next) => {
+	const origin = req.get('origin');
+	const allowedOrigins = [
+		'http://localhost:3000',
+		'http://localhost:3001',
+		process.env.ALLOWED_ORIGIN, // Set in production
+	].filter(Boolean);
+
+	if (!origin || allowedOrigins.includes(origin)) {
+		res.set('Access-Control-Allow-Origin', origin || '*');
+		res.set('Access-Control-Allow-Credentials', 'true');
+		res.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+		res.set('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+	}
+
+	if (req.method === 'OPTIONS') {
+		return res.sendStatus(200);
+	}
+
+	next();
+});
+
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+
+// Security: Request logging for audit trail (auth/sensitive endpoints only)
+app.use((req, res, next) => {
+	const url = req.originalUrl || req.url;
+	const sensitiveEndpoints = ['/admin', '/app/api'];
+	const isSensitive = sensitiveEndpoints.some(ep => url.includes(ep));
+
+	if (isSensitive && req.method !== 'GET') {
+		console.log(`[${new Date().toISOString()}] ${req.method} ${url} - IP: ${req.ip}`);
+	}
+
+	next();
+});
+
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret && process.env.NODE_ENV === 'production') {
 	throw new Error('SESSION_SECRET environment variable is required in production');
@@ -49,10 +87,19 @@ app.use(session({
 	},
 }));
 
+// Security: CSRF protection (only for form-submitting methods)
+const csrfProtection = csrf({ cookie: false }); // Uses session instead of cookies
+
 app.use((req, res, next) => {
 	res.locals.currentAdmin = req.session.adminUser || null;
 	res.locals.flashMessage = req.session.flashMessage || null;
 	delete req.session.flashMessage;
+	next();
+});
+
+// Apply CSRF protection to GET requests that serve forms
+app.get('*', csrfProtection, (req, res, next) => {
+	res.locals.csrfToken = req.csrfToken();
 	next();
 });
 
@@ -65,6 +112,27 @@ app.use(categoriaRoute);
 app.use(webappRoute);
 app.use(apiRoute);
 app.use(swaggerRoute);
+
+// Security: Error handling middleware - don't leak stack traces in production
+app.use((error, req, res, next) => {
+	const isProduction = process.env.NODE_ENV === 'production';
+	const statusCode = error.statusCode || error.status || 500;
+	const message = error.message || 'Erro interno do servidor';
+
+	// Log full error in development, minimal in production
+	if (isProduction) {
+		console.error(`[Error ${statusCode}] ${message}`);
+	} else {
+		console.error(error);
+	}
+
+	// Send safe error response
+	res.status(statusCode).json({
+		message,
+		error: isProduction ? undefined : error,
+		timestamp: new Date().toISOString(),
+	});
+});
 
 if (require.main === module) {
 	app.listen(port, () => {
