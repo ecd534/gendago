@@ -74,28 +74,26 @@
 					</div>
 				</section>
 
+				<!-- Status Filter Badges -->
+				<div class="d-flex align-items-center gap-2 flex-wrap mb-4" id="status-filters-container">
+					<span class="fw-semibold text-secondary">Status</span>
+					<button class="badge bg-light text-dark rounded-pill px-3 py-2 border-0 cursor-pointer status-filter" data-status="agendado">
+						Agendado
+					</button>
+					<button class="badge bg-light text-dark rounded-pill px-3 py-2 border-0 cursor-pointer status-filter" data-status="confirmado">
+						Confirmado
+					</button>
+					<button class="badge bg-light text-dark rounded-pill px-3 py-2 border-0 cursor-pointer status-filter" data-status="concluido">
+						Concluído
+					</button>
+					<button class="badge bg-light text-dark rounded-pill px-3 py-2 border-0 cursor-pointer status-filter" data-status="cancelado">
+						Cancelado
+					</button>
+				</div>
+
 				<% if (locals.flashMessage) { %>
 					<div class="alert alert-<%= flashMessage.type %> border-0 rounded-4 mb-4" role="alert"><%= flashMessage.text %></div>
 				<% } %>
-
-				<!-- Status Filter Badges -->
-				<div class="glass-card p-3 p-xl-4 mb-4">
-					<div class="d-flex align-items-center gap-2 flex-wrap">
-						<span class="fw-semibold text-secondary">Status</span>
-						<button class="badge bg-light text-dark rounded-pill px-3 py-2 border-0 cursor-pointer status-filter" data-status="agendado">
-							Agendado
-						</button>
-						<button class="badge bg-light text-dark rounded-pill px-3 py-2 border-0 cursor-pointer status-filter" data-status="confirmado">
-							Confirmado
-						</button>
-						<button class="badge bg-light text-dark rounded-pill px-3 py-2 border-0 cursor-pointer status-filter" data-status="concluido">
-							Concluído
-						</button>
-						<button class="badge bg-light text-dark rounded-pill px-3 py-2 border-0 cursor-pointer status-filter" data-status="cancelado">
-							Cancelado
-						</button>
-					</div>
-				</div>
 
 				<% if (!appointments.length) { %>
 					<section class="glass-card p-4 text-center text-secondary">
