@@ -88,10 +88,20 @@ app.use(session({
 }));
 
 // Security: CSRF protection (only for form-submitting methods)
-const csrfProtection = csrf({ cookie: false }); // Uses session instead of cookies
+const csrfProtection = csrf({ 
+	cookie: false, // Uses session instead of cookies
+	// Skip CSRF check for setup endpoints
+	ignoreMethods: ['GET', 'HEAD', 'OPTIONS'],
+}); // Uses session instead of cookies
 
-// Apply CSRF protection globally for form requests
-app.use(csrfProtection);
+// Apply CSRF protection globally for form requests, but skip for setup endpoints
+app.use((req, res, next) => {
+	// Skip CSRF for one-time setup endpoints
+	if (req.path === '/admin/seed-database') {
+		return next();
+	}
+	return csrfProtection(req, res, next);
+});
 
 app.use((req, res, next) => {
 	res.locals.currentAdmin = req.session.adminUser || null;
