@@ -32,6 +32,12 @@ const log = {
 
 // Validar environment variables
 function validateEnv() {
+  // Se DATABASE_URL existe, não precisa das outras
+  if (process.env.DATABASE_URL) {
+    log.success('DATABASE_URL disponível');
+    return;
+  }
+
   const required = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
   const missing = required.filter((key) => !process.env[key]);
 
@@ -45,6 +51,13 @@ function validateEnv() {
 
 // Criar pool de conexão
 function createPool() {
+  if (process.env.DATABASE_URL) {
+    return new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    });
+  }
+
   return new Pool({
     host: process.env.DB_HOST,
     port: process.env.DB_PORT || 5432,
