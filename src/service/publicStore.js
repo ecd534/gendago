@@ -132,7 +132,7 @@ async function searchCompaniesByName(name) {
 	const result = await query(`
 		SELECT id, nome, slug, telefone, email, endereco, status, ${logoColumn}
 		FROM empresas
-		WHERE status = 'Ativa' OR ativo = true
+		WHERE (status = 'Ativa' OR ativo = true)
 		  AND (nome ILIKE $1 OR slug ILIKE $1)
 		ORDER BY nome ASC
 		LIMIT 20
