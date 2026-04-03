@@ -7,6 +7,8 @@
 // SEGURO: Só executa se for primeira vez (verifica se tabelas existem)
 // =============================================================================
 
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');

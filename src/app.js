@@ -106,6 +106,23 @@ app.get('/', (req, res) => {
 	res.redirect('/admin');
 });
 
+// DEBUG: Health check
+app.get('/health', async (req, res) => {
+	try {
+		const { query } = require('./backend/db/pool');
+		const result = await query('SELECT COUNT(*) as count FROM empresas');
+		return res.json({
+			status: 'ok',
+			empresas_count: result.rows[0].count,
+		});
+	} catch (error) {
+		return res.status(500).json({
+			status: 'error',
+			message: error.message,
+		});
+	}
+});
+
 app.use(adminRoute);
 app.use(categoriaRoute);
 app.use(webappRoute);
