@@ -10,12 +10,12 @@
 -- ============================================================================
 INSERT INTO empresas (nome, slug, email, telefone, endereco, cidade, estado)
 VALUES (
-  'Espaço Duda Duarte',
-  'espacodudaduarte',
-  'contato@espacoduda.com',
-  '(11) 99999-9999',
-  'Rua das Flores, 123',
-  'São Paulo',
+  'Espaço Flavia Duarte',
+  'espacoflaviaduarte',
+  'contato@espacoflaviaduarte.com',
+  '(11) 98193-8556',
+  'Av. Francisco Nobre, 955 - Sala 2 - Medeiros',
+  'Jundiaí',
   'SP'
 )
 ON CONFLICT (slug) DO NOTHING;
@@ -29,13 +29,13 @@ ON CONFLICT (slug) DO NOTHING;
 INSERT INTO usuarios (empresa_id, email, senha, nome, permissoes, ativo)
 SELECT 
   id,
-  'admin@espacoduda.com',
+  'admin@espacoflaviaduarte.com',
   '$argon2id$v=19$m=19456,t=2,p=1$n9XUxDUFWQJQr+HkfTgwLw$FIXnjFg8w0Lq9Ek7mKiZD5HKr0R2CfZ9cRh7j3kJFvE',
   'Admin Master',
   '{"admin": true, "gerenciar_agendamentos": true, "gerenciar_clientes": true}'::jsonb,
   true
 FROM empresas
-WHERE slug = 'espacodudaduarte'
+WHERE slug = 'espacoflaviaduarte'
 ON CONFLICT (email, empresa_id) DO NOTHING;
 
 -- ============================================================================
@@ -49,7 +49,7 @@ SELECT
   '#FF6B6B',
   1,
   true
-FROM empresas WHERE slug = 'espacodudaduarte'
+FROM empresas WHERE slug = 'espacoflaviaduarte'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO categorias (empresa_id, nome, descricao, cor, ordem, ativo)
@@ -60,7 +60,7 @@ SELECT
   '#FF69B4',
   2,
   true
-FROM empresas WHERE slug = 'espacodudaduarte'
+FROM empresas WHERE slug = 'espacoflaviaduarte'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO categorias (empresa_id, nome, descricao, cor, ordem, ativo)
@@ -71,7 +71,7 @@ SELECT
   '#87CEEB',
   3,
   true
-FROM empresas WHERE slug = 'espacodudaduarte'
+FROM empresas WHERE slug = 'espacoflaviaduarte'
 ON CONFLICT DO NOTHING;
 
 -- ============================================================================
@@ -88,7 +88,7 @@ SELECT
   true
 FROM empresas e
 JOIN categorias c ON e.id = c.empresa_id AND c.nome = 'Cabelo'
-WHERE e.slug = 'espacodudaduarte'
+WHERE e.slug = 'espacoflaviaduarte'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO servicos (empresa_id, categoria_id, nome, descricao, preco, duracao_minutos, ativo)
@@ -102,7 +102,7 @@ SELECT
   true
 FROM empresas e
 JOIN categorias c ON e.id = c.empresa_id AND c.nome = 'Cabelo'
-WHERE e.slug = 'espacodudaduarte'
+WHERE e.slug = 'espacoflaviaduarte'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO servicos (empresa_id, categoria_id, nome, descricao, preco, duracao_minutos, ativo)
@@ -116,7 +116,7 @@ SELECT
   true
 FROM empresas e
 JOIN categorias c ON e.id = c.empresa_id AND c.nome = 'Manicure/Pedicure'
-WHERE e.slug = 'espacodudaduarte'
+WHERE e.slug = 'espacoflaviaduarte'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO servicos (empresa_id, categoria_id, nome, descricao, preco, duracao_minutos, ativo)
@@ -130,7 +130,7 @@ SELECT
   true
 FROM empresas e
 JOIN categorias c ON e.id = c.empresa_id AND c.nome = 'Estética'
-WHERE e.slug = 'espacodudaduarte'
+WHERE e.slug = 'espacoflaviaduarte'
 ON CONFLICT DO NOTHING;
 
 -- ============================================================================
@@ -140,28 +140,28 @@ INSERT INTO profissionais (empresa_id, nome, email, telefone, horario_inicio, ho
 SELECT 
   id,
   'Duda Duarte',
-  'duda@espacoduda.com',
-  '(11) 99999-0001',
+  'duda@espacoflaviaduarte.com',
+  '(11) 98193-8556',
   '09:00'::time,
   '18:00'::time,
   'Especialista em cabelo com experiência de 10 anos',
   true
 FROM empresas
-WHERE slug = 'espacodudaduarte'
+WHERE slug = 'espacoflaviaduarte'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO profissionais (empresa_id, nome, email, telefone, horario_inicio, horario_fim, bio, ativo)
 SELECT 
   id,
   'Marina Silva',
-  'marina@espacoduda.com',
-  '(11) 99999-0002',
+  'marina@espacoflaviaduarte.com',
+  '(11) 98193-8557',
   '10:00'::time,
   '19:00'::time,
   'Mestre em manicure',
   true
 FROM empresas
-WHERE slug = 'espacodudaduarte'
+WHERE slug = 'espacoflaviaduarte'
 ON CONFLICT DO NOTHING;
 
 -- ============================================================================

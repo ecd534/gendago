@@ -31,6 +31,7 @@
 					<% } %>
 
 					<form action="/admin/login" method="post" class="d-grid gap-3">
+						<input type="hidden" name="_csrf" value="<%= csrfToken %>">
 						<div>
 							<label for="email" class="form-label fw-semibold">E-mail</label>
 							<input
