@@ -96,8 +96,11 @@ const csrfProtection = csrf({
 
 // Apply CSRF protection globally for form requests, but skip for setup endpoints
 app.use((req, res, next) => {
-	// Skip CSRF for one-time setup endpoints
+	// Skip CSRF token generation for one-time setup endpoints
 	if (req.path === '/admin/seed-database') {
+		// Provide a dummy csrfToken function for compatibility
+		req.csrfToken = () => 'none';
+		res.locals.csrfToken = 'none';
 		return next();
 	}
 	return csrfProtection(req, res, next);
