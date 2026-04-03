@@ -124,9 +124,11 @@ app.get('/health', async (req, res) => {
 	try {
 		const { query } = require('./backend/db/pool');
 		const result = await query('SELECT COUNT(*) as count FROM empresas');
+		const companies = await query('SELECT id, nome, slug FROM empresas LIMIT 10');
 		return res.json({
 			status: 'ok',
 			empresas_count: result.rows[0].count,
+			empresas: companies.rows,
 		});
 	} catch (error) {
 		return res.status(500).json({
