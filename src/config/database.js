@@ -19,18 +19,32 @@ function getDatabaseCredential(name, fallback = '') {
 	return fallback;
 }
 
-const databaseConfig = {
-	host: process.env.DB_HOST || 'localhost',
-	port: Number(process.env.DB_PORT || 5432),
-	database: process.env.DB_NAME || 'postgres',
-	user: getDatabaseCredential('DB_USER', 'postgres'),
-	password: getDatabaseCredential('DB_PASSWORD', '1234'),
-	ssl: process.env.DB_SSLMODE === 'require' ? { rejectUnauthorized: false } : false,
-	// Security: Query timeout to prevent long-running queries
-	query_timeout: process.env.DB_QUERY_TIMEOUT || 30000, // 30 seconds
-	statement_timeout: process.env.DB_STATEMENT_TIMEOUT || 30000,
-	idle_in_transaction_session_timeout: 10000, // 10 seconds for idle transactions
-};
+let databaseConfig;
+
+// Try DATABASE_URL first (standard PostgreSQL connection string)
+if (process.env.DATABASE_URL) {
+	console.log('[Database] Using DATABASE_URL connection string');
+	databaseConfig = {
+		connectionString: process.env.DATABASE_URL,
+		ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+		query_timeout: process.env.DB_QUERY_TIMEOUT || 30000,
+		statement_timeout: process.env.DB_STATEMENT_TIMEOUT || 30000,
+		idle_in_transaction_session_timeout: 10000,
+	};
+} else {
+	// Fallback to individual credentials
+	databaseConfig = {
+		host: process.env.DB_HOST || 'localhost',
+		port: Number(process.env.DB_PORT || 5432),
+		database: process.env.DB_NAME || 'postgres',
+		user: getDatabaseCredential('DB_USER', 'postgres'),
+		password: getDatabaseCredential('DB_PASSWORD', '1234'),
+		ssl: process.env.DB_SSLMODE === 'require' ? { rejectUnauthorized: false } : false,
+		query_timeout: process.env.DB_QUERY_TIMEOUT || 30000,
+		statement_timeout: process.env.DB_STATEMENT_TIMEOUT || 30000,
+		idle_in_transaction_session_timeout: 10000,
+	};
+}
 
 module.exports = {
 	databaseConfig,
