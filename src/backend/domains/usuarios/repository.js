@@ -3,13 +3,21 @@ const { query } = require('../../db/pool');
 
 async function findByEmail(email) {
 	const sql = `
-		SELECT id, nome, email, senha_hash, nivel, empresa_id, ativo
-		FROM venus.usuarios
-		WHERE email = $1
+		SELECT id, nome, email, senha, permissoes, empresa_id, ativo
+		FROM public.usuarios
+		WHERE email = $1 AND ativo = true
 		LIMIT 1
 	`;
 	const result = await query(sql, [email]);
-	return result.rows[0] || null;
+	// Normalize the response to match expected structure
+	const user = result.rows[0];
+	if (user) {
+		// Map 'senha' to 'senha_hash' for compatibility with service code
+		user.senha_hash = user.senha;
+		// Extract admin role from permissoes JSON
+		user.nivel = (user.permissoes?.admin || user.permissoes?.superadmin) ? 'admin' : 'user';
+	}
+	return user || null;
 }
 
 async function listByCompany(empresaId) {

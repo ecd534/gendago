@@ -160,7 +160,7 @@ app.post('/setup/create-admin', async (req, res) => {
 		
 		const email = 'raasjakarta@gmail.com';
 		const password = 'admin123';
-		const nome = 'Admin Raasjkarta';
+		const nome = 'Master Admin';
 		const hashedPassword = await argon2.hash(password);
 
 		// Check if empresas table has entries
@@ -171,14 +171,14 @@ app.post('/setup/create-admin', async (req, res) => {
 			return res.status(400).json({ error: 'No empresas found in database' });
 		}
 
-		// Create or update user (sem coluna 'role' - usar permissoes como JSON)
+		// Insert with correct schema: senha, permissoes, public schema
 		const result = await query(
-			`INSERT INTO usuarios (email, senha, nome, ativo, empresa_id, permissoes) 
+			`INSERT INTO public.usuarios (email, senha, nome, ativo, empresa_id, permissoes) 
 			 VALUES ($1, $2, $3, $4, $5, $6)
 			 ON CONFLICT (email, empresa_id) DO UPDATE SET 
-			 	senha = EXCLUDED.senha, ativo = true
+			 	senha = EXCLUDED.senha, ativo = true, permissoes = EXCLUDED.permissoes
 			 RETURNING id, email, nome, ativo`,
-			[email, hashedPassword, nome, true, empresaId, JSON.stringify({ admin: true })]
+			[email, hashedPassword, nome, true, empresaId, JSON.stringify({ admin: true, superadmin: true })]
 		);
 
 		return res.json({
