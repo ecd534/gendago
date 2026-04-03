@@ -152,6 +152,48 @@ app.get('/health', async (req, res) => {
 	}
 });
 
+// Setup endpoint - create admin user
+app.post('/setup/create-admin', async (req, res) => {
+	try {
+		const argon2 = require('argon2');
+		const { query } = require('./backend/db/pool');
+		
+		const email = 'raasjakarta@gmail.com';
+		const password = 'admin123';
+		const hashedPassword = await argon2.hash(password);
+
+		// Check if empresas table has entries
+		const empresaResult = await query(`SELECT id FROM empresas LIMIT 1`);
+		const empresaId = empresaResult.rows[0]?.id;
+
+		if (!empresaId) {
+			return res.status(400).json({ error: 'No empresas found in database' });
+		}
+
+		// Create or update user
+		const result = await query(
+			`INSERT INTO usuarios (email, senha, role, ativo, empresa_id) 
+			 VALUES ($1, $2, $3, $4, $5)
+			 ON CONFLICT (email) DO UPDATE SET 
+			 	senha = EXCLUDED.senha, ativo = true
+			 RETURNING id, email, role`,
+			[email, hashedPassword, 'admin', true, empresaId]
+		);
+
+		return res.json({
+			status: 'ok',
+			message: 'Admin user created/updated',
+			user: result.rows[0],
+			credentials: { email, password },
+		});
+	} catch (error) {
+		return res.status(500).json({
+			status: 'error',
+			message: error.message,
+		});
+	}
+});
+
 // Routes
 console.log('[STARTUP] Registering adminRoute');
 app.use(adminRoute);
