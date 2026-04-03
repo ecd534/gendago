@@ -5,7 +5,13 @@
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
+    "start:api": "PORT=3001 node src/api-server.js",
+    "start:backoffice": "PORT=3002 node src/backoffice-server.js",
+    "start:webapp": "PORT=3003 node src/webapp-server.js",
     "dev": "nodemon src/app.js",
+    "dev:api": "PORT=3001 nodemon src/api-server.js",
+    "dev:backoffice": "PORT=3002 nodemon src/backoffice-server.js",
+    "dev:webapp": "PORT=3003 nodemon src/webapp-server.js",
     "seed:db": "node scripts/seed-db.js",
     "test": "jest",
     "test:watch": "jest --watch",
