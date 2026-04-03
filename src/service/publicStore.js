@@ -2,6 +2,8 @@ const { query } = require('../backend/db/pool');
 const localProfessionalsService = require('../backend/domains/profissionais/service');
 const localAppointmentsService = require('../backend/domains/agendamentos/service');
 
+// Public store service layer - fixed schema references for production
+
 let logoColumnAvailable;
 
 async function logoSelectExpression() {
