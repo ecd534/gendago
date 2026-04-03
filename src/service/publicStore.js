@@ -9,7 +9,7 @@ async function logoSelectExpression() {
 		const result = await query(`
 			SELECT 1
 			FROM information_schema.columns
-			WHERE table_schema = 'venus'
+			WHERE table_schema = 'public'
 			  AND table_name = 'empresas'
 			  AND column_name = 'logo_empresa'
 			LIMIT 1
@@ -129,8 +129,8 @@ async function searchCompaniesByName(name) {
 	const logoColumn = await logoSelectExpression();
 	const result = await query(`
 		SELECT id, nome, slug, telefone, email, endereco, status, ${logoColumn}
-		FROM venus.empresas
-		WHERE status = 'Ativa'
+		FROM empresas
+		WHERE status = 'Ativa' OR ativo = true
 		  AND (nome ILIKE $1 OR slug ILIKE $1)
 		ORDER BY nome ASC
 		LIMIT 20
@@ -150,8 +150,8 @@ async function resolveCompanyBySlug(slug) {
 	const logoColumn = await logoSelectExpression();
 	const exact = await query(`
 		SELECT id, nome, slug, telefone, email, endereco, status, ${logoColumn}
-		FROM venus.empresas
-		WHERE status = 'Ativa' AND slug = $1
+		FROM empresas
+		WHERE (status = 'Ativa' OR ativo = true) AND slug = $1
 		LIMIT 1
 	`, [normalizedSlug]);
 
@@ -172,8 +172,8 @@ async function getPublicVitrine(companyId) {
 	const logoColumn = await logoSelectExpression();
 	const companyResult = await query(`
 		SELECT id, nome, slug, telefone, email, endereco, status, ${logoColumn}
-		FROM venus.empresas
-		WHERE id = $1 AND status = 'Ativa'
+		FROM empresas
+		WHERE id = $1 AND (status = 'Ativa' OR ativo = true)
 		LIMIT 1
 	`, [companyId]);
 
@@ -194,8 +194,8 @@ async function getPublicVitrine(companyId) {
 			s.categoria_id,
 			COALESCE(c.nome, 'Procedimentos') AS categoria_nome,
 			c.id AS categoria_ref
-		FROM venus.servicos s
-		LEFT JOIN venus.categorias c ON c.id = s.categoria_id
+		FROM servicos s
+		LEFT JOIN categorias c ON c.id = s.categoria_id
 		WHERE s.empresa_id = $1
 		  AND s.ativo = true
 		ORDER BY c.nome ASC NULLS LAST, s.nome ASC
