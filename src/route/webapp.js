@@ -133,6 +133,7 @@ router.get('/app/:slug', async (req, res) => {
 			authenticatedClient: auth?.client || null,
 		});
 	} catch (error) {
+		console.error('[WebApp Error] Failed to load store context:', error.message, error.stack);
 		return res.status(500).render('webapp/not-found', {
 			title: 'Erro ao carregar loja',
 			slug: req.params.slug,
