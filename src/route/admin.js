@@ -1493,4 +1493,61 @@ router.patch('/admin/api/agendamentos/:id/status', ensureRoles(adminPermissions.
 	}
 });
 
+// ONE-TIME SETUP: Seed database (production helper)
+router.post('/admin/seed-database', async (req, res) => {
+	try {
+		// Security: Only allow via POST in production, and only if DB has no data
+		const { query } = require('../backend/db/pool');
+		const tableCount = await query(`
+			SELECT COUNT(*) as count FROM information_schema.tables 
+			WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+		`);
+		
+		// If tables already exist, don't run seed again
+		if (tableCount.rows[0].count > 1) {
+			return res.status(409).json({ 
+				message: 'Database already initialized. Seed aborted.',
+				tables: tableCount.rows[0].count
+			});
+		}
+
+		const fs = require('fs');
+		const path = require('path');
+		
+		// Execute init-db.sql
+		const initSql = fs.readFileSync(path.join(__dirname, '../../scripts/init-db.sql'), 'utf-8');
+		const initStatements = initSql.split(';').map(s => s.trim()).filter(s => s);
+		
+		for (const statement of initStatements) {
+			await query(statement);
+		}
+
+		// Execute insert-initial-data.sql
+		const dataSql = fs.readFileSync(path.join(__dirname, '../../scripts/insert-initial-data.sql'), 'utf-8');
+		const dataStatements = dataSql.split(';').map(s => s.trim()).filter(s => s);
+		
+		for (const statement of dataStatements) {
+			try {
+				await query(statement);
+			} catch (err) {
+				// Ignore ON CONFLICT errors
+				if (!err.message.includes('ON CONFLICT')) {
+					throw err;
+				}
+			}
+		}
+
+		return res.json({ 
+			status: 'success',
+			message: 'Database seeding completed successfully'
+		});
+	} catch (error) {
+		console.error('[Seed Error]', error.message);
+		return res.status(500).json({ 
+			status: 'error',
+			message: error.message 
+		});
+	}
+});
+
 module.exports = router;
