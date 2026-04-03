@@ -126,11 +126,17 @@ app.get('/health', async (req, res) => {
 			status: 'ok',
 			service: 'Backoffice',
 			empresas_count: result.rows[0].count,
+			database: 'connected',
+			timestamp: new Date().toISOString(),
 		});
 	} catch (error) {
+		console.error('[Health Check] Database error:', error.message);
 		return res.status(500).json({
 			status: 'error',
+			service: 'Backoffice',
 			message: error.message,
+			code: error.code || 'UNKNOWN_ERROR',
+			timestamp: new Date().toISOString(),
 		});
 	}
 });
@@ -160,6 +166,16 @@ app.use((error, req, res, next) => {
 if (require.main === module) {
 	app.listen(port, () => {
 		console.log(`🟡 Backoffice Server ativo na porta ${port}`);
+	});
+
+	// Handle uncaught exceptions
+	process.on('uncaughtException', (error) => {
+		console.error('[FATAL] Uncaught exception:', error);
+		process.exit(1);
+	});
+
+	process.on('unhandledRejection', (reason, promise) => {
+		console.error('[FATAL] Unhandled rejection at:', promise, 'reason:', reason);
 	});
 }
 
