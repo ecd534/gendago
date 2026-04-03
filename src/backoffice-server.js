@@ -1,17 +1,26 @@
 const express = require('express')
+console.log('[STARTUP] 1. Express required');
 require('dotenv').config();
+console.log('[STARTUP] 2. Dotenv configured');
 const session = require('express-session');
+console.log('[STARTUP] 3. Express-session required');
 const helmet = require('helmet');
+console.log('[STARTUP] 4. Helmet required');
 const csrf = require('csurf');
+console.log('[STARTUP] 5. CSRF required');
 const adminRoute = require('./route/admin');
+console.log('[STARTUP] 6. Admin routes required');
 const path = require('path');
+console.log('[STARTUP] 7. Path required');
 
 const app = express()
 const port = process.env.PORT || 3002;
+console.log(`[STARTUP] 8. Express app created, port=${port}`);
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, '../public')));
+console.log('[STARTUP] 9. EJS and static middleware configured');
 
 // Security: Helmet middleware for HTTP headers
 app.use(helmet({
@@ -66,7 +75,9 @@ app.use((req, res, next) => {
 });
 
 const sessionSecret = process.env.SESSION_SECRET;
+console.log('[STARTUP] SESSION_SECRET check:', sessionSecret ? 'SET' : 'NOT SET');
 if (!sessionSecret && process.env.NODE_ENV === 'production') {
+	console.error('[STARTUP] ERROR: SESSION_SECRET required in production!');
 	throw new Error('SESSION_SECRET environment variable is required in production');
 }
 
@@ -142,7 +153,9 @@ app.get('/health', async (req, res) => {
 });
 
 // Routes
+console.log('[STARTUP] Registering adminRoute');
 app.use(adminRoute);
+console.log('[STARTUP] adminRoute registered successfully');
 
 // Error handling middleware
 app.use((error, req, res, next) => {
@@ -164,8 +177,13 @@ app.use((error, req, res, next) => {
 });
 
 if (require.main === module) {
+	console.log('[STARTUP] About to listen on port', port);
+	console.log('[STARTUP] NODE_ENV:', process.env.NODE_ENV);
+	console.log('[STARTUP] DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
+	
 	app.listen(port, () => {
 		console.log(`🟡 Backoffice Server ativo na porta ${port}`);
+		console.log('[STARTUP] Server successfully listening!');
 	});
 
 	// Handle uncaught exceptions
