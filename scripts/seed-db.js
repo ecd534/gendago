@@ -7,7 +7,10 @@
 // SEGURO: Só executa se for primeira vez (verifica se tabelas existem)
 // =============================================================================
 
-require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+// Only load .env if DATABASE_URL is not already set (for Railway environment)
+if (!process.env.DATABASE_URL) {
+	require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+}
 
 const fs = require('fs');
 const path = require('path');
