@@ -1,13 +1,26 @@
 -- ============================================================================
--- GENDAGO - Schema PostgreSQL para Produção
+-- GENDAGO - Schema PostgreSQL (agendago)
 -- ============================================================================
 -- Este script cria todas as tabelas necessárias para a aplicação.
--- Execute UMA VEZ no banco de dados remoto do Railway.
+-- Execute UMA VEZ no banco de dados.
 -- ============================================================================
 
--- Extensões
+-- ============================================================================
+-- Extensões necessárias
+-- ============================================================================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+
+-- ============================================================================
+-- CLEANUP: Remover schema agendago se existir (para reset)
+-- ============================================================================
+DROP SCHEMA IF EXISTS agendago CASCADE;
+
+-- ============================================================================
+-- Criar schema agendago para dados da aplicação
+-- ============================================================================
+CREATE SCHEMA agendago;
+SET search_path TO agendago, public;
 
 -- ============================================================================
 -- 1. EMPRESAS (Publishers/Salões)
@@ -42,6 +55,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   email VARCHAR(255) NOT NULL,
   senha VARCHAR(255) NOT NULL,
   nome VARCHAR(255) NOT NULL,
+  nivel VARCHAR(50) NOT NULL DEFAULT 'agente' CHECK (nivel IN ('master', 'admin', 'agente')),
   permissoes JSONB DEFAULT '{}',
   ativo BOOLEAN DEFAULT true,
   ultimo_login TIMESTAMP,
@@ -51,6 +65,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
 
 COMMENT ON TABLE usuarios IS 'Usuários administradores';
 COMMENT ON COLUMN usuarios.senha IS 'Argon2 hashed password - NUNCA armazenar em texto plano';
+COMMENT ON COLUMN usuarios.nivel IS 'Nível de acesso: master (super admin), admin (admin da empresa), agente (operador)';
 COMMENT ON COLUMN usuarios.permissoes IS 'JSON com permissões do usuário';
 CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_email_empresa ON usuarios(email, empresa_id);
 CREATE INDEX IF NOT EXISTS idx_usuarios_ativo ON usuarios(ativo);
@@ -205,7 +220,69 @@ CREATE INDEX IF NOT EXISTS idx_pagamentos_agendamento ON pagamentos(agendamento_
 CREATE INDEX IF NOT EXISTS idx_pagamentos_empresa ON pagamentos(empresa_id);
 
 -- ============================================================================
--- 9. LOGS DE AUDITORIA (Segurança)
+-- 9. ESCALAS (Horários de trabalho dos profissionais)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS escalas (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  profissional_id UUID NOT NULL REFERENCES profissionais(id) ON DELETE CASCADE,
+  dia_semana VARCHAR(10) NOT NULL CHECK (dia_semana IN ('seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom')),
+  horario_inicio TIME NOT NULL,
+  horario_fim TIME NOT NULL,
+  intervalo_minutos INT DEFAULT 0,
+  ativo BOOLEAN DEFAULT true,
+  criado_em TIMESTAMP DEFAULT NOW(),
+  atualizado_em TIMESTAMP DEFAULT NOW()
+);
+
+COMMENT ON TABLE escalas IS 'Escalas de trabalho dos profissionais por dia da semana';
+CREATE INDEX IF NOT EXISTS idx_escalas_profissional ON escalas(profissional_id);
+CREATE INDEX IF NOT EXISTS idx_escalas_empresa ON escalas(empresa_id);
+CREATE INDEX IF NOT EXISTS idx_escalas_dia ON escalas(dia_semana);
+
+-- ============================================================================
+-- 10. BLOQUEIOS (Indisponibilidades dos profissionais)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS bloqueios (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  profissional_id UUID NOT NULL REFERENCES profissionais(id) ON DELETE CASCADE,
+  motivo VARCHAR(255),
+  data_hora_inicio TIMESTAMP NOT NULL,
+  data_hora_fim TIMESTAMP NOT NULL,
+  recurren_cia VARCHAR(50) DEFAULT 'nenhuma' CHECK (recurren_cia IN ('nenhuma', 'diaria', 'semanal', 'mensal')),
+  criado_em TIMESTAMP DEFAULT NOW(),
+  atualizado_em TIMESTAMP DEFAULT NOW()
+);
+
+COMMENT ON TABLE bloqueios IS 'Períodos em que profissionais não estão disponíveis (férias, atestado, etc)';
+CREATE INDEX IF NOT EXISTS idx_bloqueios_profissional ON bloqueios(profissional_id);
+CREATE INDEX IF NOT EXISTS idx_bloqueios_empresa ON bloqueios(empresa_id);
+CREATE INDEX IF NOT EXISTS idx_bloqueios_data ON bloqueios(data_hora_inicio, data_hora_fim);
+
+-- ============================================================================
+-- 11. PROFISSIONAL_SERVICO (Relação muitos-para-muitos)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS profissional_servico (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  profissional_id UUID NOT NULL REFERENCES profissionais(id) ON DELETE CASCADE,
+  servico_id UUID NOT NULL REFERENCES servicos(id) ON DELETE CASCADE,
+  empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  preco_customizado DECIMAL(10, 2),
+  duracao_customizada INT,
+  ativo BOOLEAN DEFAULT true,
+  criado_em TIMESTAMP DEFAULT NOW(),
+  atualizado_em TIMESTAMP DEFAULT NOW()
+);
+
+COMMENT ON TABLE profissional_servico IS 'Relacionamento entre profissionais e serviços que oferecem';
+COMMENT ON COLUMN profissional_servico.preco_customizado IS 'Preço específico (NULL = usar preço padrão do serviço)';
+COMMENT ON COLUMN profissional_servico.duracao_customizada IS 'Duração específica (NULL = usar duração padrão)';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_profissional_servico_unique ON profissional_servico(profissional_id, servico_id);
+CREATE INDEX IF NOT EXISTS idx_profissional_servico_empresa ON profissional_servico(empresa_id);
+
+-- ============================================================================
+-- 12. LOGS DE AUDITORIA (Segurança)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS audit_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

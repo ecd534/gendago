@@ -11,7 +11,7 @@ async function hasLogoColumn() {
 	const result = await query(`
 		SELECT 1
 		FROM information_schema.columns
-		WHERE table_schema = 'venus'
+		WHERE table_schema = 'public'
 		  AND table_name = 'empresas'
 		  AND column_name = 'logo_empresa'
 		LIMIT 1
@@ -28,7 +28,7 @@ async function ensureLogoColumnForWrite() {
 	}
 
 	try {
-		await query('ALTER TABLE venus.empresas ADD COLUMN IF NOT EXISTS logo_empresa TEXT');
+		await query('ALTER TABLE empresas ADD COLUMN IF NOT EXISTS logo_empresa TEXT');
 		logoColumnAvailable = true;
 		return true;
 	} catch (error) {
@@ -38,10 +38,9 @@ async function ensureLogoColumnForWrite() {
 }
 
 async function listCompanies() {
-	const withLogo = await hasLogoColumn();
 	const sql = `
-		SELECT id, nome, slug, telefone, email, endereco, status, ${withLogo ? 'logo_empresa' : 'NULL::text AS logo_empresa'}
-		FROM venus.empresas
+		SELECT id, nome, slug, telefone, email, endereco, ativo
+		FROM empresas
 		ORDER BY nome ASC
 	`;
 	const result = await query(sql);
@@ -49,10 +48,9 @@ async function listCompanies() {
 }
 
 async function getCompanyById(companyId) {
-	const withLogo = await hasLogoColumn();
 	const sql = `
-		SELECT id, nome, slug, telefone, email, endereco, status, ${withLogo ? 'logo_empresa' : 'NULL::text AS logo_empresa'}
-		FROM venus.empresas
+		SELECT id, nome, slug, telefone, email, endereco, ativo
+		FROM empresas
 		WHERE id = $1
 		LIMIT 1
 	`;
@@ -65,12 +63,12 @@ async function createCompany({ nome, slug, telefone, email, endereco, status, lo
 	const companyId = randomUUID();
 	const sql = withLogo
 		? `
-			INSERT INTO venus.empresas (id, nome, slug, telefone, email, endereco, status, logo_empresa)
+			INSERT INTO empresas (id, nome, slug, telefone, email, endereco, status, logo_empresa)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 			RETURNING id, nome, slug, telefone, email, endereco, status, logo_empresa
 		`
 		: `
-			INSERT INTO venus.empresas (id, nome, slug, telefone, email, endereco, status)
+			INSERT INTO empresas (id, nome, slug, telefone, email, endereco, status)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)
 			RETURNING id, nome, slug, telefone, email, endereco, status, NULL::text AS logo_empresa
 		`;
@@ -84,7 +82,7 @@ async function createCompany({ nome, slug, telefone, email, endereco, status, lo
 async function updateCompanyStatus(companyId, status) {
 	const withLogo = await hasLogoColumn();
 	const sql = `
-		UPDATE venus.empresas
+		UPDATE empresas
 		SET status = $1
 		WHERE id = $2
 		RETURNING id, nome, slug, telefone, email, endereco, status, ${withLogo ? 'logo_empresa' : 'NULL::text AS logo_empresa'}
@@ -97,7 +95,7 @@ async function updateCompany(companyId, { nome, telefone, email, endereco, statu
 	const withLogo = await ensureLogoColumnForWrite();
 	const sql = withLogo
 		? `
-			UPDATE venus.empresas
+			UPDATE empresas
 			SET nome = $1,
 				telefone = $2,
 				email = $3,
@@ -108,7 +106,7 @@ async function updateCompany(companyId, { nome, telefone, email, endereco, statu
 			RETURNING id, nome, slug, telefone, email, endereco, status, logo_empresa
 		`
 		: `
-			UPDATE venus.empresas
+			UPDATE empresas
 			SET nome = $1,
 				telefone = $2,
 				email = $3,

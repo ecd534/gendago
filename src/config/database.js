@@ -13,7 +13,7 @@ function getDatabaseCredential(name, fallback = '') {
 
 	// Log warnings for weak defaults in development
 	if ((name === 'DB_USER' || name === 'DB_PASSWORD') && fallback) {
-		console.warn(`⚠️  [Database] Using weak default for ${name}. Set environment variable for production.`);
+		// Warning: weak default for production - should be set via environment variable
 	}
 
 	return fallback;
@@ -23,7 +23,7 @@ let databaseConfig;
 
 // Try DATABASE_URL first (standard PostgreSQL connection string)
 if (process.env.DATABASE_URL) {
-	console.log('[Database] Using DATABASE_URL connection string');
+	// Using DATABASE_URL connection string
 	databaseConfig = {
 		connectionString: process.env.DATABASE_URL,
 		ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
@@ -38,7 +38,7 @@ if (process.env.DATABASE_URL) {
 		port: Number(process.env.DB_PORT || 5432),
 		database: process.env.DB_NAME || 'postgres',
 		user: getDatabaseCredential('DB_USER', 'postgres'),
-		password: getDatabaseCredential('DB_PASSWORD', '1234'),
+		password: getDatabaseCredential('DB_PASSWORD', '123456'),
 		ssl: process.env.DB_SSLMODE === 'require' ? { rejectUnauthorized: false } : false,
 		query_timeout: process.env.DB_QUERY_TIMEOUT || 30000,
 		statement_timeout: process.env.DB_STATEMENT_TIMEOUT || 30000,

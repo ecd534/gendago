@@ -6,17 +6,20 @@
 -- Senha: 123456 (Argon2 hashed)
 -- =============================================================================
 
+SET search_path TO agendago, public;
+
 -- Deletar se já existe (para atualizar)
 DELETE FROM usuarios WHERE email = 'raasjakarta@gmail.com';
 
 -- Inserir novo usuário Master
-INSERT INTO usuarios (id, empresa_id, email, senha, nome, permissoes, ativo)
+INSERT INTO usuarios (id, empresa_id, email, senha, nome, nivel, permissoes, ativo)
 VALUES (
   gen_random_uuid(),
   (SELECT id FROM empresas LIMIT 1),
   'raasjakarta@gmail.com',
-  '$argon2id$v=19$m=19456,t=2,p=1$CJKWxvRf8qQ3G8k5nQ9Lqw$YZbk9D8dJ7xUaXqKpV5m8Q6sN3cL2bR9fX0mK8zZvEE',
-  'Master Admin',
+  '$argon2id$v=19$m=65536,t=3,p=4$Nh0Ftu/ivXC/Z9ciAYWqfw$d5VWGWIPzx0M81FhIubBeQxcUa5fUZsV688tOudoQkU',
+  'Master',
+  'master',
   '{"admin": true, "gerenciar_agendamentos": true, "gerenciar_clientes": true, "gerenciar_usuarios": true}'::jsonb,
   true
 );

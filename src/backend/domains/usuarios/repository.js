@@ -3,8 +3,8 @@ const { query } = require('../../db/pool');
 
 async function findByEmail(email) {
 	const sql = `
-		SELECT id, nome, email, senha, permissoes, empresa_id, ativo
-		FROM public.usuarios
+		SELECT id, nome, email, senha, permissoes, empresa_id, ativo, nivel
+		FROM agendago.usuarios
 		WHERE email = $1 AND ativo = true
 		LIMIT 1
 	`;
@@ -14,20 +14,22 @@ async function findByEmail(email) {
 	if (user) {
 		// Map 'senha' to 'senha_hash' for compatibility with service code
 		user.senha_hash = user.senha;
-		// Extract admin role from permissoes JSON
-		user.nivel = (user.permissoes?.admin || user.permissoes?.superadmin) ? 'admin' : 'user';
+		// Use nivel from database, fallback to admin if admin permission exists
+		if (!user.nivel) {
+			user.nivel = (user.permissoes?.admin || user.permissoes?.superadmin) ? 'admin' : 'agente';
+		}
 	}
 	return user || null;
 }
 
 async function listByCompany(empresaId) {
 	if (!empresaId) {
-		const result = await query('SELECT id, nome, email, empresa_id, ativo FROM public.usuarios ORDER BY nome ASC');
+		const result = await query('SELECT id, nome, email, empresa_id, ativo, nivel FROM agendago.usuarios ORDER BY nome ASC');
 		return result.rows;
 	}
 
 	const result = await query(
-		'SELECT id, nome, email, empresa_id, ativo FROM public.usuarios WHERE empresa_id = $1 ORDER BY nome ASC',
+		'SELECT id, nome, email, empresa_id, ativo, nivel FROM agendago.usuarios WHERE empresa_id = $1 ORDER BY nome ASC',
 		[empresaId],
 	);
 	return result.rows;
@@ -35,25 +37,28 @@ async function listByCompany(empresaId) {
 
 async function createUser({ nome, email, senhaHash, nivel, empresaId, ativo }) {
 	const sql = `
-		INSERT INTO public.usuarios (id, nome, email, senha, empresa_id, ativo, permissoes)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, nome, email, empresa_id, ativo
+		INSERT INTO agendago.usuarios (id, nome, email, senha, empresa_id, ativo, permissoes, nivel)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, nome, email, empresa_id, ativo, nivel
 	`;
 	// Encode nivel into permissoes JSON
 	const permissoes = { [nivel]: true };
-	const result = await query(sql, [randomUUID(), nome, email, senhaHash, empresaId, ativo, JSON.stringify(permissoes)]);
+	const result = await query(sql, [randomUUID(), nome, email, senhaHash, empresaId, ativo, JSON.stringify(permissoes), nivel]);
 	return result.rows[0];
 }
 
 async function findById(userId) {
 	const result = await query(
-		'SELECT id, nome, email, senha, permissoes, empresa_id, ativo FROM public.usuarios WHERE id = $1 LIMIT 1',
+		'SELECT id, nome, email, senha, permissoes, empresa_id, ativo, nivel FROM agendago.usuarios WHERE id = $1 LIMIT 1',
 		[userId],
 	);
 	const user = result.rows[0];
 	if (user) {
 		user.senha_hash = user.senha;
-		user.nivel = (user.permissoes?.admin || user.permissoes?.superadmin) ? 'admin' : 'user';
+		// Use nivel from database, fallback to admin if admin permission exists
+		if (!user.nivel) {
+			user.nivel = (user.permissoes?.admin || user.permissoes?.superadmin) ? 'admin' : 'agente';
+		}
 	}
 	return user || null;
 }
@@ -81,10 +86,10 @@ async function updateUser(userId, fields) {
 
 	values.push(userId);
 	const sql = `
-		UPDATE public.usuarios
+		UPDATE agendago.usuarios
 		SET ${sets.join(', ')}
 		WHERE id = $${index}
-		RETURNING id, nome, email, empresa_id, ativo
+		RETURNING id, nome, email, empresa_id, ativo, nivel
 	`;
 	const result = await query(sql, values);
 	return result.rows[0] || null;

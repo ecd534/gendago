@@ -62,9 +62,7 @@ app.use((req, res, next) => {
 	const sensitiveEndpoints = ['/admin', '/app/api'];
 	const isSensitive = sensitiveEndpoints.some(ep => url.includes(ep));
 
-	if (isSensitive && req.method !== 'GET') {
-		console.log(`[${new Date().toISOString()}] ${req.method} ${url} - IP: ${req.ip}`);
-	}
+	// Logging disabled in development. Enable with: console.log(...)
 
 	next();
 });
@@ -143,6 +141,18 @@ app.use(categoriaRoute);
 app.use(webappRoute);
 app.use(apiRoute);
 app.use(swaggerRoute);
+
+// Security: Handle CSRF errors gracefully - redirect to login with error message
+app.use((error, req, res, next) => {
+	if (error.code === 'EBADCSRFTOKEN') {
+		req.session.flashMessage = {
+			type: 'warning',
+			text: 'Sessão expirada. Por favor, tente novamente.',
+		};
+		return res.redirect('/admin/login');
+	}
+	return next(error);
+});
 
 // Security: Error handling middleware - don't leak stack traces in production
 app.use((error, req, res, next) => {

@@ -5,7 +5,7 @@ async function listCategoriesByCompany(companyId, onlyActive = true) {
 	const params = [companyId];
 	let sql = `
 		SELECT id, nome, empresa_id, ativo
-		FROM venus.categorias
+		FROM categorias
 		WHERE empresa_id = $1
 	`;
 
@@ -22,7 +22,7 @@ async function listCategoriesByCompany(companyId, onlyActive = true) {
 async function findCategoryById(categoryId) {
 	const sql = `
 		SELECT id, nome, empresa_id, ativo
-		FROM venus.categorias
+		FROM categorias
 		WHERE id = $1
 		LIMIT 1
 	`;
@@ -32,7 +32,7 @@ async function findCategoryById(categoryId) {
 
 async function createCategory({ nome, empresaId, ativo }) {
 	const sql = `
-		INSERT INTO venus.categorias (id, nome, empresa_id, ativo)
+		INSERT INTO categorias (id, nome, empresa_id, ativo)
 		VALUES ($1, $2, $3, $4)
 		RETURNING id, nome, empresa_id, ativo
 	`;
@@ -42,7 +42,7 @@ async function createCategory({ nome, empresaId, ativo }) {
 
 async function updateCategory(categoryId, { nome, ativo }) {
 	const sql = `
-		UPDATE venus.categorias
+		UPDATE categorias
 		SET nome = $1,
 			ativo = $2
 		WHERE id = $3
@@ -56,7 +56,7 @@ async function listServicesByCompany(companyId, onlyActive = false) {
 	const params = [companyId];
 	let sql = `
 		SELECT id, nome, preco, duracao_minutos, empresa_id, categoria_id, ativo
-		FROM venus.servicos
+		FROM servicos
 		WHERE empresa_id = $1
 	`;
 
@@ -74,7 +74,7 @@ async function listServicesByCategory(categoryId, onlyActive = false) {
 	const params = [categoryId];
 	let sql = `
 		SELECT id, nome, preco, duracao_minutos, empresa_id, categoria_id, ativo
-		FROM venus.servicos
+		FROM servicos
 		WHERE categoria_id = $1
 	`;
 
@@ -91,7 +91,7 @@ async function listServicesByCategory(categoryId, onlyActive = false) {
 async function findServiceById(serviceId) {
 	const sql = `
 		SELECT id, nome, preco, duracao_minutos, empresa_id, categoria_id, ativo
-		FROM venus.servicos
+		FROM servicos
 		WHERE id = $1
 		LIMIT 1
 	`;
@@ -101,7 +101,7 @@ async function findServiceById(serviceId) {
 
 async function createService({ nome, preco, duracaoMinutos, empresaId, categoriaId, ativo }) {
 	const sql = `
-		INSERT INTO venus.servicos (id, nome, preco, duracao_minutos, empresa_id, categoria_id, ativo)
+		INSERT INTO servicos (id, nome, preco, duracao_minutos, empresa_id, categoria_id, ativo)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, nome, preco, duracao_minutos, empresa_id, categoria_id, ativo
 	`;
@@ -111,7 +111,7 @@ async function createService({ nome, preco, duracaoMinutos, empresaId, categoria
 
 async function updateService(serviceId, { nome, preco, duracaoMinutos, categoriaId, ativo }) {
 	const sql = `
-		UPDATE venus.servicos
+		UPDATE servicos
 		SET nome = $1,
 			preco = $2,
 			duracao_minutos = $3,

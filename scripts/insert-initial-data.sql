@@ -5,6 +5,8 @@
 -- Substitua os hashes Argon2 pelos gerados realmente
 -- =============================================================================
 
+SET search_path TO agendago, public;
+
 -- ============================================================================
 -- 1. INSERIR EMPRESA
 -- ============================================================================
@@ -26,12 +28,13 @@ ON CONFLICT (slug) DO NOTHING;
 -- Hash Argon2 para senha "admin123" - MUDE EM PRODUÇÃO!
 -- Para gerar: node -e "const argon2 = require('argon2'); argon2.hash('sua_senha').then(h => console.log(h))"
 
-INSERT INTO usuarios (empresa_id, email, senha, nome, permissoes, ativo)
+INSERT INTO usuarios (empresa_id, email, senha, nome, nivel, permissoes, ativo)
 SELECT 
   id,
   'admin@espacoflaviaduarte.com',
   '$argon2id$v=19$m=19456,t=2,p=1$n9XUxDUFWQJQr+HkfTgwLw$FIXnjFg8w0Lq9Ek7mKiZD5HKr0R2CfZ9cRh7j3kJFvE',
   'Admin Master',
+  'master',
   '{"admin": true, "gerenciar_agendamentos": true, "gerenciar_clientes": true}'::jsonb,
   true
 FROM empresas

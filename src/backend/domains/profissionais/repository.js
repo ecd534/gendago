@@ -5,7 +5,7 @@ async function listProfessionalsByCompany(companyId, onlyActive = false) {
 	const params = [companyId];
 	let sql = `
 		SELECT id, nome, ativo, empresa_id
-		FROM venus.profissionais
+		FROM profissionais
 		WHERE empresa_id = $1
 	`;
 
@@ -22,7 +22,7 @@ async function listProfessionalsByCompany(companyId, onlyActive = false) {
 async function findProfessionalById(professionalId) {
 	const sql = `
 		SELECT id, nome, ativo, empresa_id
-		FROM venus.profissionais
+		FROM profissionais
 		WHERE id = $1
 		LIMIT 1
 	`;
@@ -32,7 +32,7 @@ async function findProfessionalById(professionalId) {
 
 async function createProfessional({ nome, ativo, empresaId }) {
 	const sql = `
-		INSERT INTO venus.profissionais (id, nome, ativo, empresa_id)
+		INSERT INTO profissionais (id, nome, ativo, empresa_id)
 		VALUES ($1, $2, $3, $4)
 		RETURNING id, nome, ativo, empresa_id
 	`;
@@ -43,7 +43,7 @@ async function createProfessional({ nome, ativo, empresaId }) {
 async function listScalesByProfessional(professionalId) {
 	const sql = `
 		SELECT id, profissional_id, dia_semana, hora_inicio, hora_fim
-		FROM venus.escalas
+		FROM escalas
 		WHERE profissional_id = $1
 		ORDER BY dia_semana ASC, hora_inicio ASC
 	`;
@@ -54,7 +54,7 @@ async function listScalesByProfessional(professionalId) {
 async function findScaleByProfessionalAndDay(professionalId, dayOfWeek) {
 	const sql = `
 		SELECT id, profissional_id, dia_semana, hora_inicio, hora_fim
-		FROM venus.escalas
+		FROM escalas
 		WHERE profissional_id = $1 AND dia_semana = $2
 		LIMIT 1
 	`;
@@ -63,12 +63,12 @@ async function findScaleByProfessionalAndDay(professionalId, dayOfWeek) {
 }
 
 async function deleteScale(scaleId) {
-	await query('DELETE FROM venus.escalas WHERE id = $1', [scaleId]);
+	await query('DELETE FROM escalas WHERE id = $1', [scaleId]);
 }
 
 async function createScale({ professionalId, dayOfWeek, startTime, endTime }) {
 	const sql = `
-		INSERT INTO venus.escalas (id, profissional_id, dia_semana, hora_inicio, hora_fim)
+		INSERT INTO escalas (id, profissional_id, dia_semana, hora_inicio, hora_fim)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id, profissional_id, dia_semana, hora_inicio, hora_fim
 	`;
@@ -79,7 +79,7 @@ async function createScale({ professionalId, dayOfWeek, startTime, endTime }) {
 async function listBlocksByProfessional(professionalId) {
 	const sql = `
 		SELECT id, profissional_id, data, hora_inicio, hora_fim, motivo
-		FROM venus.bloqueios
+		FROM bloqueios
 		WHERE profissional_id = $1
 		ORDER BY data ASC, hora_inicio ASC
 	`;
@@ -90,7 +90,7 @@ async function listBlocksByProfessional(professionalId) {
 async function listBlocksByProfessionalAndDate(professionalId, date) {
 	const sql = `
 		SELECT id, profissional_id, data, hora_inicio, hora_fim, motivo
-		FROM venus.bloqueios
+		FROM bloqueios
 		WHERE profissional_id = $1 AND data = $2
 		ORDER BY hora_inicio ASC
 	`;
@@ -100,7 +100,7 @@ async function listBlocksByProfessionalAndDate(professionalId, date) {
 
 async function createBlock({ professionalId, date, startTime, endTime, reason }) {
 	const sql = `
-		INSERT INTO venus.bloqueios (id, profissional_id, data, hora_inicio, hora_fim, motivo)
+		INSERT INTO bloqueios (id, profissional_id, data, hora_inicio, hora_fim, motivo)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, profissional_id, data, hora_inicio, hora_fim, motivo
 	`;
@@ -111,7 +111,7 @@ async function createBlock({ professionalId, date, startTime, endTime, reason })
 async function findServiceById(serviceId) {
 	const sql = `
 		SELECT id, nome, preco, duracao_minutos, empresa_id, categoria_id, ativo
-		FROM venus.servicos
+		FROM servicos
 		WHERE id = $1
 		LIMIT 1
 	`;
@@ -122,8 +122,8 @@ async function findServiceById(serviceId) {
 async function listActiveProfessionalsByService(serviceId) {
 	const sql = `
 		SELECT p.id, p.nome, p.ativo, p.empresa_id
-		FROM venus.profissionais p
-		INNER JOIN venus.profissional_servico ps ON ps.profissional_id = p.id
+		FROM profissionais p
+		INNER JOIN profissional_servico ps ON ps.profissional_id = p.id
 		WHERE ps.servico_id = $1 AND p.ativo = true
 		ORDER BY p.nome ASC
 	`;
@@ -134,8 +134,8 @@ async function listActiveProfessionalsByService(serviceId) {
 async function listProfessionalsByService(serviceId) {
 	const sql = `
 		SELECT p.id, p.nome, p.ativo, p.empresa_id
-		FROM venus.profissionais p
-		INNER JOIN venus.profissional_servico ps ON ps.profissional_id = p.id
+		FROM profissionais p
+		INNER JOIN profissional_servico ps ON ps.profissional_id = p.id
 		WHERE ps.servico_id = $1
 		ORDER BY p.nome ASC
 	`;
@@ -145,7 +145,7 @@ async function listProfessionalsByService(serviceId) {
 
 async function addProfessionalToService({ professionalId, serviceId }) {
 	const sql = `
-		INSERT INTO venus.profissional_servico (profissional_id, servico_id)
+		INSERT INTO profissional_servico (profissional_id, servico_id)
 		VALUES ($1, $2)
 		ON CONFLICT DO NOTHING
 	`;
@@ -154,20 +154,20 @@ async function addProfessionalToService({ professionalId, serviceId }) {
 
 async function removeProfessionalFromService({ professionalId, serviceId }) {
 	await query(
-		'DELETE FROM venus.profissional_servico WHERE profissional_id = $1 AND servico_id = $2',
+		'DELETE FROM profissional_servico WHERE profissional_id = $1 AND servico_id = $2',
 		[professionalId, serviceId],
 	);
 }
 
 async function listOverlappingAppointments(professionalId, startDateTime, endDateTime) {
 	const sql = `
-		SELECT id, profissional_id, servico_id, data_hora_inicio, data_hora_fim, status
-		FROM venus.agendamentos
+		SELECT id, profissional_id, servico_id, data_hora, duracao_minutos, status
+		FROM agendamentos
 		WHERE profissional_id = $1
 		  AND lower(trim(coalesce(status, ''))) = ANY($2)
-		  AND data_hora_inicio < $3::timestamptz
-		  AND coalesce(data_hora_fim, data_hora_inicio + interval '30 minutes') > $4::timestamptz
-		ORDER BY data_hora_inicio ASC
+		  AND data_hora < $3::timestamptz
+		  AND (data_hora + make_interval(mins => coalesce(duracao_minutos, 60))) > $4::timestamptz
+		ORDER BY data_hora ASC
 	`;
 	const result = await query(sql, [professionalId, ['agendado', 'confirmado'], endDateTime, startDateTime]);
 	return result.rows;

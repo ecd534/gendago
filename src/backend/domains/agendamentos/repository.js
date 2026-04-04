@@ -4,7 +4,7 @@ const { query } = require('../../db/pool');
 async function findServiceById(serviceId) {
 	const sql = `
 		SELECT id, nome, preco, duracao_minutos, empresa_id, categoria_id, ativo
-		FROM venus.servicos
+		FROM servicos
 		WHERE id = $1
 		LIMIT 1
 	`;
@@ -15,7 +15,7 @@ async function findServiceById(serviceId) {
 async function findProfessionalById(professionalId) {
 	const sql = `
 		SELECT id, nome, ativo, empresa_id
-		FROM venus.profissionais
+		FROM profissionais
 		WHERE id = $1
 		LIMIT 1
 	`;
@@ -25,8 +25,8 @@ async function findProfessionalById(professionalId) {
 
 async function findClientById(clientId) {
 	const sql = `
-		SELECT id, telefone, nome, ultimo_contato, status, datacadastro, idade, email, empresa_id
-		FROM venus.clientes
+		SELECT id, telefone, nome, email, empresa_id, cpf, data_nascimento, genero, endereco, cidade, estado, cep, ativo, ultimo_login, criado_em, atualizado_em
+		FROM clientes
 		WHERE id = $1
 		LIMIT 1
 	`;
@@ -36,8 +36,8 @@ async function findClientById(clientId) {
 
 async function findClientByPhoneAndCompany(phone, companyId) {
 	const sql = `
-		SELECT id, telefone, nome, ultimo_contato, status, datacadastro, idade, email, empresa_id
-		FROM venus.clientes
+		SELECT id, telefone, nome, email, empresa_id, cpf, data_nascimento, genero, endereco, cidade, estado, cep, ativo, ultimo_login, criado_em, atualizado_em
+		FROM clientes
 		WHERE telefone = $1 AND empresa_id = $2
 		LIMIT 1
 	`;
@@ -45,20 +45,20 @@ async function findClientByPhoneAndCompany(phone, companyId) {
 	return result.rows[0] || null;
 }
 
-async function createClient({ nome, telefone, empresaId }) {
+async function createClient({ nome, telefone, empresaId, email = null, senha = null, cpf = null }) {
 	const sql = `
-		INSERT INTO venus.clientes (id, nome, telefone, ultimo_contato, status, datacadastro, empresa_id)
-		VALUES ($1, $2, $3, NOW(), 'Ativo', CURRENT_DATE, $4)
-		RETURNING id, telefone, nome, ultimo_contato, status, datacadastro, idade, email, empresa_id
+		INSERT INTO clientes (id, nome, telefone, email, empresa_id, senha, cpf, ativo, criado_em, atualizado_em)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, true, NOW(), NOW())
+		RETURNING id, telefone, nome, email, empresa_id, cpf, data_nascimento, genero, endereco, cidade, estado, cep, ativo, ultimo_login, criado_em, atualizado_em
 	`;
-	const result = await query(sql, [randomUUID(), nome, telefone, empresaId]);
+	const result = await query(sql, [randomUUID(), nome, telefone, email, empresaId, senha, cpf]);
 	return result.rows[0] || null;
 }
 
 async function updateClientLastContact(clientId) {
 	const sql = `
-		UPDATE venus.clientes
-		SET ultimo_contato = NOW()
+		UPDATE clientes
+		SET atualizado_em = NOW()
 		WHERE id = $1
 	`;
 	await query(sql, [clientId]);
@@ -72,17 +72,17 @@ async function listAppointmentsByDate(companyId, startDateTime, endDateTime) {
 			a.profissional_id,
 			a.cliente_id,
 			a.servico_id,
-			a.data_hora_inicio,
-			a.data_hora_fim,
+			a.data_hora,
+			a.duracao_minutos,
 			a.status,
-			a.created_at,
+			a.criado_em,
 			c.nome AS nome
-		FROM venus.agendamentos a
-		INNER JOIN venus.clientes c ON c.id = a.cliente_id
+		FROM agendamentos a
+		INNER JOIN clientes c ON c.id = a.cliente_id
 		WHERE a.empresa_id = $1
-		  AND a.data_hora_inicio >= $2::timestamptz
-		  AND a.data_hora_inicio <= $3::timestamptz
-		ORDER BY a.data_hora_inicio ASC
+		  AND a.data_hora >= $2::timestamptz
+		  AND a.data_hora <= $3::timestamptz
+		ORDER BY a.data_hora ASC
 	`;
 	const result = await query(sql, [companyId, startDateTime, endDateTime]);
 	return result.rows;
@@ -92,22 +92,22 @@ async function listDetailedAppointmentsByDate(companyId, startDateTime, endDateT
 	const sql = `
 		SELECT
 			a.id,
-			a.data_hora_inicio AS inicio,
-			a.data_hora_fim AS fim,
+			a.data_hora AS inicio,
+			(a.data_hora + make_interval(mins => a.duracao_minutos)) AS fim,
 			c.nome AS cliente,
 			c.telefone,
 			s.nome AS servico,
 			p.nome AS profissional,
-			s.preco AS valor,
+			a.preco AS valor,
 			a.status
-		FROM venus.agendamentos a
-		INNER JOIN venus.clientes c ON c.id = a.cliente_id
-		INNER JOIN venus.servicos s ON s.id = a.servico_id
-		INNER JOIN venus.profissionais p ON p.id = a.profissional_id
+		FROM agendamentos a
+		INNER JOIN clientes c ON c.id = a.cliente_id
+		INNER JOIN servicos s ON s.id = a.servico_id
+		INNER JOIN profissionais p ON p.id = a.profissional_id
 		WHERE a.empresa_id = $1
-		  AND a.data_hora_inicio >= $2::timestamptz
-		  AND a.data_hora_inicio <= $3::timestamptz
-		ORDER BY a.data_hora_inicio ASC
+		  AND a.data_hora >= $2::timestamptz
+		  AND a.data_hora <= $3::timestamptz
+		ORDER BY a.data_hora ASC
 	`;
 	const result = await query(sql, [companyId, startDateTime, endDateTime]);
 	return result.rows;
@@ -117,20 +117,20 @@ async function listDetailedAppointmentsByCompany(companyId) {
 	const sql = `
 		SELECT
 			a.id,
-			a.data_hora_inicio AS inicio,
-			a.data_hora_fim AS fim,
+			a.data_hora AS inicio,
+			(a.data_hora + make_interval(mins => a.duracao_minutos)) AS fim,
 			c.nome AS cliente,
 			c.telefone,
 			s.nome AS servico,
 			p.nome AS profissional,
-			s.preco AS valor,
+			a.preco AS valor,
 			a.status
-		FROM venus.agendamentos a
-		INNER JOIN venus.clientes c ON c.id = a.cliente_id
-		INNER JOIN venus.servicos s ON s.id = a.servico_id
-		INNER JOIN venus.profissionais p ON p.id = a.profissional_id
+		FROM agendamentos a
+		INNER JOIN clientes c ON c.id = a.cliente_id
+		INNER JOIN servicos s ON s.id = a.servico_id
+		INNER JOIN profissionais p ON p.id = a.profissional_id
 		WHERE a.empresa_id = $1
-		ORDER BY a.data_hora_inicio ASC
+		ORDER BY a.data_hora ASC
 	`;
 	const result = await query(sql, [companyId]);
 	return result.rows;
@@ -141,17 +141,17 @@ async function listPublicAppointmentsByClient(companyId, clientId, limit = 5) {
 		SELECT
 			a.id,
 			a.status,
-			a.data_hora_inicio,
-			a.data_hora_fim,
+			a.data_hora,
+			(a.data_hora + make_interval(mins => a.duracao_minutos)) AS data_hora_fim,
 			s.nome AS servico,
-			s.preco AS valor,
+			a.preco AS valor,
 			p.nome AS profissional
-		FROM venus.agendamentos a
-		INNER JOIN venus.servicos s ON s.id = a.servico_id
-		INNER JOIN venus.profissionais p ON p.id = a.profissional_id
+		FROM agendamentos a
+		INNER JOIN servicos s ON s.id = a.servico_id
+		INNER JOIN profissionais p ON p.id = a.profissional_id
 		WHERE a.empresa_id = $1
 		  AND a.cliente_id = $2
-		ORDER BY a.data_hora_inicio DESC
+		ORDER BY a.data_hora DESC
 		LIMIT $3
 	`;
 	const result = await query(sql, [companyId, clientId, limit]);
@@ -160,33 +160,35 @@ async function listPublicAppointmentsByClient(companyId, clientId, limit = 5) {
 
 async function listOverlappingAppointments(professionalId, startDateTime, endDateTime) {
 	const sql = `
-		SELECT id, profissional_id, data_hora_inicio, data_hora_fim, status
-		FROM venus.agendamentos
+		SELECT id, profissional_id, data_hora, duracao_minutos, status
+		FROM agendamentos
 		WHERE profissional_id = $1
 		  AND lower(trim(coalesce(status, ''))) = ANY($2)
-		  AND data_hora_inicio < $3::timestamptz
-		  AND coalesce(data_hora_fim, data_hora_inicio + interval '30 minutes') > $4::timestamptz
-		ORDER BY data_hora_inicio ASC
+		  AND data_hora < $3::timestamptz
+		  AND (data_hora + make_interval(mins => coalesce(duracao_minutos, 60))) > $4::timestamptz
+		ORDER BY data_hora ASC
 	`;
 	const result = await query(sql, [professionalId, ['agendado', 'confirmado'], endDateTime, startDateTime]);
 	return result.rows;
 }
 
-async function createAppointment({ companyId, professionalId, clientId, serviceId, startDateTime, endDateTime }) {
+async function createAppointment({ companyId, professionalId, clientId, serviceId, startDateTime, duracaoMinutos = 60, preco = null, criadoPor = null }) {
 	const sql = `
-		INSERT INTO venus.agendamentos (
+		INSERT INTO agendamentos (
 			id,
 			empresa_id,
 			profissional_id,
 			cliente_id,
 			servico_id,
-			data_hora_inicio,
-			data_hora_fim,
+			data_hora,
+			duracao_minutos,
+			preco,
 			status,
-			created_at
+			criado_em,
+			criado_por
 		)
-		VALUES ($1, $2, $3, $4, $5, $6::timestamptz, $7::timestamptz, 'agendado', NOW())
-		RETURNING id, empresa_id, profissional_id, cliente_id, servico_id, data_hora_inicio, data_hora_fim, status, created_at
+		VALUES ($1, $2, $3, $4, $5, $6::timestamptz, $7, $8, 'agendado', NOW(), $9)
+		RETURNING id, empresa_id, profissional_id, cliente_id, servico_id, data_hora, duracao_minutos, preco, status, criado_em
 	`;
 	const result = await query(sql, [
 		randomUUID(),
@@ -195,15 +197,17 @@ async function createAppointment({ companyId, professionalId, clientId, serviceI
 		clientId,
 		serviceId,
 		startDateTime,
-		endDateTime,
+		duracaoMinutos,
+		preco,
+		criadoPor,
 	]);
 	return result.rows[0] || null;
 }
 
 async function findAppointmentById(appointmentId) {
 	const sql = `
-		SELECT id, empresa_id, profissional_id, cliente_id, servico_id, data_hora_inicio, data_hora_fim, status, created_at
-		FROM venus.agendamentos
+		SELECT id, empresa_id, profissional_id, cliente_id, servico_id, data_hora, duracao_minutos, preco, status, motivo_cancelamento, notas, criado_em, atualizado_em, criado_por
+		FROM agendamentos
 		WHERE id = $1
 		LIMIT 1
 	`;
@@ -213,10 +217,10 @@ async function findAppointmentById(appointmentId) {
 
 async function updateAppointmentStatus(appointmentId, status) {
 	const sql = `
-		UPDATE venus.agendamentos
-		SET status = $1
+		UPDATE agendamentos
+		SET status = $1, atualizado_em = NOW()
 		WHERE id = $2
-		RETURNING id, empresa_id, profissional_id, cliente_id, servico_id, data_hora_inicio, data_hora_fim, status, created_at
+		RETURNING id, empresa_id, profissional_id, cliente_id, servico_id, data_hora, duracao_minutos, preco, status, motivo_cancelamento, notas, criado_em, atualizado_em, criado_por
 	`;
 	const result = await query(sql, [status, appointmentId]);
 	return result.rows[0] || null;
