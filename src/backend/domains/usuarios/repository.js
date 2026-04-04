@@ -22,12 +22,12 @@ async function findByEmail(email) {
 
 async function listByCompany(empresaId) {
 	if (!empresaId) {
-		const result = await query('SELECT id, nome, email, nivel, empresa_id, ativo FROM venus.usuarios ORDER BY nome ASC');
+		const result = await query('SELECT id, nome, email, empresa_id, ativo FROM public.usuarios ORDER BY nome ASC');
 		return result.rows;
 	}
 
 	const result = await query(
-		'SELECT id, nome, email, nivel, empresa_id, ativo FROM venus.usuarios WHERE empresa_id = $1 ORDER BY nome ASC',
+		'SELECT id, nome, email, empresa_id, ativo FROM public.usuarios WHERE empresa_id = $1 ORDER BY nome ASC',
 		[empresaId],
 	);
 	return result.rows;
@@ -35,20 +35,27 @@ async function listByCompany(empresaId) {
 
 async function createUser({ nome, email, senhaHash, nivel, empresaId, ativo }) {
 	const sql = `
-		INSERT INTO venus.usuarios (id, nome, email, senha_hash, nivel, empresa_id, ativo)
+		INSERT INTO public.usuarios (id, nome, email, senha, empresa_id, ativo, permissoes)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, nome, email, nivel, empresa_id, ativo
+		RETURNING id, nome, email, empresa_id, ativo
 	`;
-	const result = await query(sql, [randomUUID(), nome, email, senhaHash, nivel, empresaId, ativo]);
+	// Encode nivel into permissoes JSON
+	const permissoes = { [nivel]: true };
+	const result = await query(sql, [randomUUID(), nome, email, senhaHash, empresaId, ativo, JSON.stringify(permissoes)]);
 	return result.rows[0];
 }
 
 async function findById(userId) {
 	const result = await query(
-		'SELECT id, nome, email, senha_hash, nivel, empresa_id, ativo FROM venus.usuarios WHERE id = $1 LIMIT 1',
+		'SELECT id, nome, email, senha, permissoes, empresa_id, ativo FROM public.usuarios WHERE id = $1 LIMIT 1',
 		[userId],
 	);
-	return result.rows[0] || null;
+	const user = result.rows[0];
+	if (user) {
+		user.senha_hash = user.senha;
+		user.nivel = (user.permissoes?.admin || user.permissoes?.superadmin) ? 'admin' : 'user';
+	}
+	return user || null;
 }
 
 async function updateUser(userId, fields) {
@@ -57,8 +64,14 @@ async function updateUser(userId, fields) {
 	let index = 1;
 
 	for (const [key, value] of Object.entries(fields)) {
-		sets.push(`${key} = $${index}`);
-		values.push(value);
+		// Map 'nivel' to 'permissoes' JSON
+		if (key === 'nivel') {
+			sets.push(`permissoes = $${index}`);
+			values.push(JSON.stringify({ [value]: true }));
+		} else {
+			sets.push(`${key} = $${index}`);
+			values.push(value);
+		}
 		index += 1;
 	}
 
@@ -68,10 +81,10 @@ async function updateUser(userId, fields) {
 
 	values.push(userId);
 	const sql = `
-		UPDATE venus.usuarios
+		UPDATE public.usuarios
 		SET ${sets.join(', ')}
 		WHERE id = $${index}
-		RETURNING id, nome, email, nivel, empresa_id, ativo
+		RETURNING id, nome, email, empresa_id, ativo
 	`;
 	const result = await query(sql, values);
 	return result.rows[0] || null;
