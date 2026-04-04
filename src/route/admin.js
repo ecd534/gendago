@@ -1500,7 +1500,7 @@ router.post('/admin/seed-database', async (req, res) => {
 		const { query } = require('../backend/db/pool');
 		const tableCount = await query(`
 			SELECT COUNT(*) as count FROM information_schema.tables 
-			WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+			WHERE table_schema = 'agendago' AND table_type = 'BASE TABLE'
 		`);
 		
 		// If tables already exist, don't run seed again

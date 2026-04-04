@@ -11,7 +11,7 @@ async function logoSelectExpression() {
 		const result = await query(`
 			SELECT 1
 			FROM information_schema.columns
-			WHERE table_schema = 'public'
+			WHERE table_schema = 'agendago'
 			  AND table_name = 'empresas'
 			  AND column_name = 'logo_empresa'
 			LIMIT 1
@@ -130,9 +130,9 @@ async function searchCompaniesByName(name) {
 
 	const logoColumn = await logoSelectExpression();
 	const result = await query(`
-		SELECT id, nome, slug, telefone, email, endereco, status, ${logoColumn}
+		SELECT id, nome, slug, telefone, email, endereco, ${logoColumn}
 		FROM empresas
-		WHERE (status = 'Ativa' OR ativo = true)
+		WHERE ativo = true
 		  AND (nome ILIKE $1 OR slug ILIKE $1)
 		ORDER BY nome ASC
 		LIMIT 20
@@ -151,9 +151,9 @@ async function resolveCompanyBySlug(slug) {
 
 	const logoColumn = await logoSelectExpression();
 	const exact = await query(`
-		SELECT id, nome, slug, telefone, email, endereco, status, ${logoColumn}
+		SELECT id, nome, slug, telefone, email, endereco, ${logoColumn}
 		FROM empresas
-		WHERE (status = 'Ativa' OR ativo = true) AND slug = $1
+		WHERE ativo = true AND slug = $1
 		LIMIT 1
 	`, [normalizedSlug]);
 
@@ -173,9 +173,9 @@ async function resolveCompanyBySlug(slug) {
 async function getPublicVitrine(companyId) {
 	const logoColumn = await logoSelectExpression();
 	const companyResult = await query(`
-		SELECT id, nome, slug, telefone, email, endereco, status, ${logoColumn}
+		SELECT id, nome, slug, telefone, email, endereco, ${logoColumn}
 		FROM empresas
-		WHERE id = $1 AND (status = 'Ativa' OR ativo = true)
+		WHERE id = $1 AND ativo = true
 		LIMIT 1
 	`, [companyId]);
 
