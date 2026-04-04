@@ -6,7 +6,7 @@
  * Este script cria o banco de dados do GendaGO do zero.
  * 
  * ✅ O que faz:
- *   1. Cria o schema 'agendago'
+ *   1. Cria o schema 'gendago'
  *   2. Cria todas as 12 tabelas necessárias
  *   3. Insere dados iniciais (empresa, categorias, serviços)
  *   4. Cria o usuário master (raasjakarta@gmail.com)
@@ -84,11 +84,11 @@ async function runMigrations() {
 		const result = await pool.query(`
 			SELECT table_name 
 			FROM information_schema.tables 
-			WHERE table_schema = 'agendago'
+			WHERE table_schema = 'gendago'
 			ORDER BY table_name
 		`);
 
-		console.log(`\n📋 Tabelas criadas no schema agendago (${result.rows.length} total):`);
+		console.log(`\n📋 Tabelas criadas no schema gendago (${result.rows.length} total):`);
 		result.rows.forEach((row) => {
 			console.log(`   - ${row.table_name}`);
 		});

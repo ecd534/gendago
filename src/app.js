@@ -56,21 +56,7 @@ app.use((req, res, next) => {
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-// Security: Request logging for audit trail (auth/sensitive endpoints only)
-app.use((req, res, next) => {
-	const url = req.originalUrl || req.url;
-	const sensitiveEndpoints = ['/admin', '/app/api'];
-	const isSensitive = sensitiveEndpoints.some(ep => url.includes(ep));
-
-	// Logging disabled in development. Enable with: console.log(...)
-
-	next();
-});
-
 const sessionSecret = process.env.SESSION_SECRET;
-if (!sessionSecret && process.env.NODE_ENV === 'production') {
-	throw new Error('SESSION_SECRET environment variable is required in production');
-}
 
 app.use(session({
 	name: 'gendago.admin.sid',
@@ -85,12 +71,10 @@ app.use(session({
 	},
 }));
 
-// Security: CSRF protection (only for form-submitting methods)
-const csrfProtection = csrf({ 
-	cookie: false, // Uses session instead of cookies
-	// Skip CSRF check for setup endpoints
+const csrfProtection = csrf({
+	cookie: false,
 	ignoreMethods: ['GET', 'HEAD', 'OPTIONS'],
-}); // Uses session instead of cookies
+});
 
 // Apply CSRF protection globally for form requests, but skip for setup endpoints
 app.use((req, res, next) => {
@@ -100,13 +84,6 @@ app.use((req, res, next) => {
 		return next();
 	}
 
-	// Skip CSRF token generation for one-time setup endpoints
-	if (req.path === '/admin/seed-database') {
-		// Provide a dummy csrfToken function for compatibility
-		req.csrfToken = () => 'none';
-		res.locals.csrfToken = 'none';
-		return next();
-	}
 	return csrfProtection(req, res, next);
 });
 
@@ -121,25 +98,6 @@ app.use((req, res, next) => {
 
 app.get('/', (req, res) => {
 	res.redirect('/admin');
-});
-
-// DEBUG: Health check
-app.get('/health', async (req, res) => {
-	try {
-		const { query } = require('./backend/db/pool');
-		const result = await query('SELECT COUNT(*) as count FROM empresas');
-		const companies = await query('SELECT id, nome, slug FROM empresas LIMIT 10');
-		return res.json({
-			status: 'ok',
-			empresas_count: result.rows[0].count,
-			empresas: companies.rows,
-		});
-	} catch (error) {
-		return res.status(500).json({
-			status: 'error',
-			message: error.message,
-		});
-	}
 });
 
 app.use(adminRoute);
@@ -168,7 +126,7 @@ app.use((error, req, res, next) => {
 });
 
 // Security: Error handling middleware - don't leak stack traces in production
-app.use((error, req, res, next) => {
+app.use((error, req, res, _next) => {
 	const isProduction = process.env.NODE_ENV === 'production';
 	const statusCode = error.statusCode || error.status || 500;
 	const message = error.message || 'Erro interno do servidor';

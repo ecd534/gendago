@@ -11,7 +11,7 @@ async function logoSelectExpression() {
 		const result = await query(`
 			SELECT 1
 			FROM information_schema.columns
-			WHERE table_schema = 'agendago'
+			WHERE table_schema = 'gendago'
 			  AND table_name = 'empresas'
 			  AND column_name = 'logo_empresa'
 			LIMIT 1

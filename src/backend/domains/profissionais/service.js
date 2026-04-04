@@ -142,8 +142,12 @@ function overlapsTimeRange(slotStart, slotEnd, rangeStart, rangeEnd) {
 }
 
 function getAppointmentEndDate(appointment) {
-	const start = new Date(appointment.data_hora_inicio);
-	const end = appointment.data_hora_fim ? new Date(appointment.data_hora_fim) : new Date(start.getTime() + 30 * 60000);
+	const startRaw = appointment.data_hora_inicio || appointment.data_hora;
+	const start = new Date(startRaw);
+	const durationMinutes = Number(appointment.duracao_minutos || 30);
+	const end = appointment.data_hora_fim
+		? new Date(appointment.data_hora_fim)
+		: new Date(start.getTime() + (durationMinutes * 60000));
 	return {
 		start,
 		end,
@@ -213,6 +217,7 @@ async function createScale(viewer, input) {
 		dayOfWeek,
 		startTime: start.text,
 		endTime: end.text,
+		empresaId: professional.empresa_id,
 	});
 
 	return { status: 'Escala atualizada' };
@@ -244,6 +249,7 @@ async function createBlock(viewer, input) {
 		startTime: start.text,
 		endTime: end.text,
 		reason: String(input.motivo || '').trim() || 'Bloqueio manual',
+		empresaId: professional.empresa_id,
 	});
 
 	return {
@@ -286,9 +292,8 @@ async function getAvailability(viewer, professionalId, dateConsulta, serviceId) 
 		const end = new Date(current.getTime() + serviceDurationMinutes * 60000);
 
 		const booked = appointments.some((appointment) => {
-			const appointmentStart = new Date(appointment.data_hora_inicio);
-			const appointmentEnd = new Date(appointment.data_hora_fim);
-			return overlapsTimeRange(current, end, appointmentStart, appointmentEnd);
+			const appointmentRange = getAppointmentEndDate(appointment);
+			return overlapsTimeRange(current, end, appointmentRange.start, appointmentRange.end);
 		});
 
 		const blocked = blocks.some((block) => {
@@ -349,7 +354,11 @@ async function addProfessionalToService(viewer, serviceId, professionalId) {
 		throw createError('Profissional nao pertence a esta empresa', 403);
 	}
 
-	await repository.addProfessionalToService({ professionalId, serviceId });
+	await repository.addProfessionalToService({
+		professionalId,
+		serviceId,
+		empresaId: service.empresa_id,
+	});
 	return { status: 'Profissional vinculado ao servico' };
 }
 

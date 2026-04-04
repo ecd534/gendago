@@ -6,7 +6,7 @@
 -- Senha: 123456 (Argon2 hashed)
 -- =============================================================================
 
-SET search_path TO agendago, public;
+SET search_path TO gendago, public;
 
 -- Deletar se já existe (para atualizar)
 DELETE FROM usuarios WHERE email = 'raasjakarta@gmail.com';

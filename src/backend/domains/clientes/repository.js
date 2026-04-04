@@ -21,7 +21,7 @@ async function listClientsByCompany(companyId = null) {
 				ultimo_login, 
 				criado_em, 
 				atualizado_em
-			FROM agendago.clientes
+			FROM gendago.clientes
 			ORDER BY nome ASC
 		`;
 		const result = await query(sql);
@@ -46,7 +46,7 @@ async function listClientsByCompany(companyId = null) {
 			ultimo_login, 
 			criado_em, 
 			atualizado_em
-		FROM agendago.clientes
+		FROM gendago.clientes
 		WHERE empresa_id = $1
 		ORDER BY nome ASC
 	`;
@@ -73,7 +73,7 @@ async function findClientById(clientId) {
 			ultimo_login, 
 			criado_em, 
 			atualizado_em
-		FROM agendago.clientes
+		FROM gendago.clientes
 		WHERE id = $1
 		LIMIT 1
 	`;
@@ -101,7 +101,7 @@ async function findClientsByPhone(phone, companyId = null) {
 				ultimo_login, 
 				criado_em, 
 				atualizado_em
-			 FROM agendago.clientes
+			 FROM gendago.clientes
 			 WHERE telefone = $1
 			 ORDER BY nome ASC`,
 			[phone],
@@ -127,7 +127,7 @@ async function findClientsByPhone(phone, companyId = null) {
 			ultimo_login, 
 			criado_em, 
 			atualizado_em
-		 FROM agendago.clientes
+		 FROM gendago.clientes
 		 WHERE telefone = $1 AND empresa_id = $2
 		 ORDER BY nome ASC`,
 		[phone, companyId],
@@ -155,7 +155,7 @@ async function findClientByEmailAndCompany(email, companyId) {
 			ultimo_login, 
 			criado_em, 
 			atualizado_em
-		FROM agendago.clientes
+		FROM gendago.clientes
 		WHERE lower(email) = lower($1) AND empresa_id = $2
 		LIMIT 1
 	`;
@@ -183,7 +183,7 @@ async function findClientByPhoneDigitsAndCompany(phoneDigits, companyId) {
 			ultimo_login, 
 			criado_em, 
 			atualizado_em
-		FROM agendago.clientes
+		FROM gendago.clientes
 		WHERE regexp_replace(coalesce(telefone, ''), '\\D', '', 'g') = $1
 		  AND empresa_id = $2
 		LIMIT 1
@@ -194,7 +194,7 @@ async function findClientByPhoneDigitsAndCompany(phoneDigits, companyId) {
 
 async function createClient({ telefone, nome, empresaId, email, cpf, data_nascimento, genero }) {
 	const sql = `
-		INSERT INTO agendago.clientes (id, telefone, nome, empresa_id, email, cpf, data_nascimento, genero, ativo, senha)
+		INSERT INTO gendago.clientes (id, telefone, nome, empresa_id, email, cpf, data_nascimento, genero, ativo, senha)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, '')
 		RETURNING 
 			id, 
@@ -220,7 +220,7 @@ async function createClient({ telefone, nome, empresaId, email, cpf, data_nascim
 
 async function createPublicClient({ telefone, nome, empresaId, email, senhaHash }) {
 	const sql = `
-		INSERT INTO agendago.clientes (
+		INSERT INTO gendago.clientes (
 			id,
 			telefone,
 			nome,
@@ -255,7 +255,7 @@ async function createPublicClient({ telefone, nome, empresaId, email, senhaHash 
 
 async function updateClient(clientId, { telefone, nome, empresaId, email, cpf, data_nascimento, genero }) {
 	const sql = `
-		UPDATE agendago.clientes
+		UPDATE gendago.clientes
 		SET telefone = $1,
 			nome = $2,
 			empresa_id = $3,
@@ -289,7 +289,7 @@ async function updateClient(clientId, { telefone, nome, empresaId, email, cpf, d
 
 async function updateClientLastLogin(clientId) {
 	const sql = `
-		UPDATE agendago.clientes
+		UPDATE gendago.clientes
 		SET ultimo_login = NOW(),
 			atualizado_em = NOW()
 		WHERE id = $1

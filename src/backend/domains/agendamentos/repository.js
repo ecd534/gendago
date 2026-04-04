@@ -98,7 +98,7 @@ async function listDetailedAppointmentsByDate(companyId, startDateTime, endDateT
 			c.telefone,
 			s.nome AS servico,
 			p.nome AS profissional,
-			a.preco AS valor,
+			COALESCE(NULLIF(a.preco, 0), s.preco, 0) AS valor,
 			a.status
 		FROM agendamentos a
 		INNER JOIN clientes c ON c.id = a.cliente_id
@@ -123,7 +123,7 @@ async function listDetailedAppointmentsByCompany(companyId) {
 			c.telefone,
 			s.nome AS servico,
 			p.nome AS profissional,
-			a.preco AS valor,
+			COALESCE(NULLIF(a.preco, 0), s.preco, 0) AS valor,
 			a.status
 		FROM agendamentos a
 		INNER JOIN clientes c ON c.id = a.cliente_id
@@ -144,7 +144,7 @@ async function listPublicAppointmentsByClient(companyId, clientId, limit = 5) {
 			a.data_hora,
 			(a.data_hora + make_interval(mins => a.duracao_minutos)) AS data_hora_fim,
 			s.nome AS servico,
-			a.preco AS valor,
+			COALESCE(NULLIF(a.preco, 0), s.preco, 0) AS valor,
 			p.nome AS profissional
 		FROM agendamentos a
 		INNER JOIN servicos s ON s.id = a.servico_id

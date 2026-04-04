@@ -1,6 +1,20 @@
 const { randomUUID } = require('crypto');
 const { query } = require('../../db/pool');
 
+const DAY_NUM_TO_CODE = { 1: 'seg', 2: 'ter', 3: 'qua', 4: 'qui', 5: 'sex', 6: 'sab', 7: 'dom' };
+
+const SCALE_DAY_CASE = `
+	CASE dia_semana
+		WHEN 'seg' THEN 1
+		WHEN 'ter' THEN 2
+		WHEN 'qua' THEN 3
+		WHEN 'qui' THEN 4
+		WHEN 'sex' THEN 5
+		WHEN 'sab' THEN 6
+		WHEN 'dom' THEN 7
+		ELSE 0
+	END`;
+
 async function listProfessionalsByCompany(companyId, onlyActive = false) {
 	const params = [companyId];
 	let sql = `
@@ -42,23 +56,34 @@ async function createProfessional({ nome, ativo, empresaId }) {
 
 async function listScalesByProfessional(professionalId) {
 	const sql = `
-		SELECT id, profissional_id, dia_semana, hora_inicio, hora_fim
+		SELECT id, profissional_id,
+		       ${SCALE_DAY_CASE} AS dia_semana,
+		       horario_inicio AS hora_inicio,
+		       horario_fim AS hora_fim
 		FROM escalas
 		WHERE profissional_id = $1
-		ORDER BY dia_semana ASC, hora_inicio ASC
+		ORDER BY dia_semana ASC, horario_inicio ASC
 	`;
 	const result = await query(sql, [professionalId]);
 	return result.rows;
 }
 
 async function findScaleByProfessionalAndDay(professionalId, dayOfWeek) {
+	const dayCode = DAY_NUM_TO_CODE[dayOfWeek];
+	if (!dayCode) {
+		return null;
+	}
+
 	const sql = `
-		SELECT id, profissional_id, dia_semana, hora_inicio, hora_fim
+		SELECT id, profissional_id,
+		       ${SCALE_DAY_CASE} AS dia_semana,
+		       horario_inicio AS hora_inicio,
+		       horario_fim AS hora_fim
 		FROM escalas
 		WHERE profissional_id = $1 AND dia_semana = $2
 		LIMIT 1
 	`;
-	const result = await query(sql, [professionalId, dayOfWeek]);
+	const result = await query(sql, [professionalId, dayCode]);
 	return result.rows[0] || null;
 }
 
@@ -66,22 +91,33 @@ async function deleteScale(scaleId) {
 	await query('DELETE FROM escalas WHERE id = $1', [scaleId]);
 }
 
-async function createScale({ professionalId, dayOfWeek, startTime, endTime }) {
+async function createScale({ professionalId, dayOfWeek, startTime, endTime, empresaId }) {
+	const dayCode = DAY_NUM_TO_CODE[dayOfWeek];
+	if (!dayCode) {
+		throw new Error(`dia_semana invalido: ${dayOfWeek}`);
+	}
+
 	const sql = `
-		INSERT INTO escalas (id, profissional_id, dia_semana, hora_inicio, hora_fim)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, profissional_id, dia_semana, hora_inicio, hora_fim
+		INSERT INTO escalas (id, empresa_id, profissional_id, dia_semana, horario_inicio, horario_fim)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, profissional_id,
+		          ${SCALE_DAY_CASE} AS dia_semana,
+		          horario_inicio AS hora_inicio,
+		          horario_fim AS hora_fim
 	`;
-	const result = await query(sql, [randomUUID(), professionalId, dayOfWeek, startTime, endTime]);
+	const result = await query(sql, [randomUUID(), empresaId, professionalId, dayCode, startTime, endTime]);
 	return result.rows[0] || null;
 }
 
 async function listBlocksByProfessional(professionalId) {
 	const sql = `
-		SELECT id, profissional_id, data, hora_inicio, hora_fim, motivo
+		SELECT id, profissional_id, motivo,
+		       data_hora_inicio::date AS data,
+		       data_hora_inicio::time AS hora_inicio,
+		       data_hora_fim::time AS hora_fim
 		FROM bloqueios
 		WHERE profissional_id = $1
-		ORDER BY data ASC, hora_inicio ASC
+		ORDER BY data_hora_inicio ASC
 	`;
 	const result = await query(sql, [professionalId]);
 	return result.rows;
@@ -89,22 +125,28 @@ async function listBlocksByProfessional(professionalId) {
 
 async function listBlocksByProfessionalAndDate(professionalId, date) {
 	const sql = `
-		SELECT id, profissional_id, data, hora_inicio, hora_fim, motivo
+		SELECT id, profissional_id, motivo,
+		       data_hora_inicio::date AS data,
+		       data_hora_inicio::time AS hora_inicio,
+		       data_hora_fim::time AS hora_fim
 		FROM bloqueios
-		WHERE profissional_id = $1 AND data = $2
-		ORDER BY hora_inicio ASC
+		WHERE profissional_id = $1 AND data_hora_inicio::date = $2::date
+		ORDER BY data_hora_inicio ASC
 	`;
 	const result = await query(sql, [professionalId, date]);
 	return result.rows;
 }
 
-async function createBlock({ professionalId, date, startTime, endTime, reason }) {
+async function createBlock({ professionalId, date, startTime, endTime, reason, empresaId }) {
 	const sql = `
-		INSERT INTO bloqueios (id, profissional_id, data, hora_inicio, hora_fim, motivo)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, profissional_id, data, hora_inicio, hora_fim, motivo
+		INSERT INTO bloqueios (id, empresa_id, profissional_id, motivo, data_hora_inicio, data_hora_fim)
+		VALUES ($1, $2, $3, $4, ($5::date + $6::time)::timestamp, ($5::date + $7::time)::timestamp)
+		RETURNING id, profissional_id, motivo,
+		          data_hora_inicio::date AS data,
+		          data_hora_inicio::time AS hora_inicio,
+		          data_hora_fim::time AS hora_fim
 	`;
-	const result = await query(sql, [randomUUID(), professionalId, date, startTime, endTime, reason]);
+	const result = await query(sql, [randomUUID(), empresaId, professionalId, reason, date, startTime, endTime]);
 	return result.rows[0] || null;
 }
 
@@ -143,13 +185,13 @@ async function listProfessionalsByService(serviceId) {
 	return result.rows;
 }
 
-async function addProfessionalToService({ professionalId, serviceId }) {
+async function addProfessionalToService({ professionalId, serviceId, empresaId }) {
 	const sql = `
-		INSERT INTO profissional_servico (profissional_id, servico_id)
-		VALUES ($1, $2)
+		INSERT INTO profissional_servico (profissional_id, servico_id, empresa_id)
+		VALUES ($1, $2, $3)
 		ON CONFLICT DO NOTHING
 	`;
-	await query(sql, [professionalId, serviceId]);
+	await query(sql, [professionalId, serviceId, empresaId]);
 }
 
 async function removeProfessionalFromService({ professionalId, serviceId }) {

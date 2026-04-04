@@ -164,7 +164,7 @@ async function createAppointment(viewer, input) {
 		throw createError('data_inicio, cliente_nome, cliente_telefone, servico_id, profissional_id e empresa_id sao obrigatorios', 422);
 	}
 
-	const { service, professional, endDate } = await validateAppointmentReferences({
+	const { service, professional } = await validateAppointmentReferences({
 		companyId,
 		serviceId,
 		professionalId,
@@ -178,7 +178,8 @@ async function createAppointment(viewer, input) {
 		clientId: client.id,
 		serviceId: service.id,
 		startDateTime: startDate.toISOString(),
-		endDateTime: endDate.toISOString(),
+		duracaoMinutos: Number(service.duracao_minutos || 60),
+		preco: Number(service.preco || 0),
 	});
 
 	return normalizeAppointment(created);
@@ -195,7 +196,7 @@ async function createPublicAppointment(input) {
 		throw createError('data_inicio, servico_id, profissional_id, empresa_id e cliente_id sao obrigatorios', 422);
 	}
 
-	const { service, professional, endDate } = await validateAppointmentReferences({
+	const { service, professional } = await validateAppointmentReferences({
 		companyId,
 		serviceId,
 		professionalId,
@@ -228,7 +229,8 @@ async function createPublicAppointment(input) {
 		clientId: client.id,
 		serviceId: service.id,
 		startDateTime: startDate.toISOString(),
-		endDateTime: endDate.toISOString(),
+		duracaoMinutos: Number(service.duracao_minutos || 60),
+		preco: Number(service.preco || 0),
 	});
 
 	return {
@@ -263,7 +265,7 @@ async function listPublicClientAppointments(input) {
 		servico: item.servico,
 		valor: Number(item.valor || 0),
 		profissional: item.profissional || '',
-		data_agendamento: item.data_hora_inicio,
+		data_agendamento: item.data_hora,
 	}));
 }
 

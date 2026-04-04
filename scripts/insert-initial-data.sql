@@ -5,7 +5,7 @@
 -- Substitua os hashes Argon2 pelos gerados realmente
 -- =============================================================================
 
-SET search_path TO agendago, public;
+SET search_path TO gendago, public;
 
 -- ============================================================================
 -- 1. INSERIR EMPRESA
@@ -32,7 +32,7 @@ INSERT INTO usuarios (empresa_id, email, senha, nome, nivel, permissoes, ativo)
 SELECT 
   id,
   'admin@espacoflaviaduarte.com',
-  '$argon2id$v=19$m=19456,t=2,p=1$n9XUxDUFWQJQr+HkfTgwLw$FIXnjFg8w0Lq9Ek7mKiZD5HKr0R2CfZ9cRh7j3kJFvE',
+  '$argon2id$v=19$m=65536,t=3,p=4$qYnbd6A/NCyI/4kRfyJ+YA$ULXP4mEn1/SxsGnUZAkT1PLSwgW3TTPsuY/Ey34uCwc',
   'Admin Master',
   'master',
   '{"admin": true, "gerenciar_agendamentos": true, "gerenciar_clientes": true}'::jsonb,

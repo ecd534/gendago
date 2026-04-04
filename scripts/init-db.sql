@@ -1,5 +1,5 @@
 -- ============================================================================
--- GENDAGO - Schema PostgreSQL (agendago)
+-- GENDAGO - Schema PostgreSQL (gendago)
 -- ============================================================================
 -- Este script cria todas as tabelas necessárias para a aplicação.
 -- Execute UMA VEZ no banco de dados.
@@ -12,15 +12,15 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
 -- ============================================================================
--- CLEANUP: Remover schema agendago se existir (para reset)
+-- CLEANUP: Remover schema gendago se existir (para reset)
 -- ============================================================================
-DROP SCHEMA IF EXISTS agendago CASCADE;
+DROP SCHEMA IF EXISTS gendago CASCADE;
 
 -- ============================================================================
--- Criar schema agendago para dados da aplicação
+-- Criar schema gendago para dados da aplicação
 -- ============================================================================
-CREATE SCHEMA agendago;
-SET search_path TO agendago, public;
+CREATE SCHEMA gendago;
+SET search_path TO gendago, public;
 
 -- ============================================================================
 -- 1. EMPRESAS (Publishers/Salões)

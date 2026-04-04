@@ -9,7 +9,7 @@ Esta pasta contém os scripts necessários para **criar e inicializar** o banco 
 | Arquivo | Propósito |
 |---------|-----------|
 | `run-migrations.js` | **Execute este arquivo** - Executa todos os scripts SQL na ordem correta |
-| `init-db.sql` | Cria o schema `agendago` e todas as 12 tabelas |
+| `init-db.sql` | Cria o schema `gendago` e todas as 12 tabelas |
 | `insert-initial-data.sql` | Insere dados iniciais (empresa, categorias, serviços) |
 | `insert-master-user.sql` | Cria o usuário master para login |
 
@@ -41,7 +41,7 @@ node run-migrations.js
 
 ✨ Todas as migrações foram executadas com sucesso!
 
-📋 Tabelas criadas no schema agendago (13 total):
+📋 Tabelas criadas no schema gendago (13 total):
    - agendamentos
    - audit_logs
    - bloqueios
@@ -74,7 +74,7 @@ node run-migrations.js
 ## 📊 Estrutura do Banco
 
 ### Schema
-- **Nome:** `agendago`
+- **Nome:** `gendago`
 
 ### Tabelas (12)
 1. **empresas** - Empresas/Salões
@@ -98,7 +98,7 @@ node run-migrations.js
 Para deletar tudo e recomeçar:
 
 ```sql
-DROP SCHEMA IF EXISTS agendago CASCADE;
+DROP SCHEMA IF EXISTS gendago CASCADE;
 ```
 
 Depois execute novamente:

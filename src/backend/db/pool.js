@@ -5,7 +5,7 @@ const pool = new Pool(databaseConfig);
 
 // Set search_path for all connections
 pool.on('connect', (client) => {
-	client.query('SET search_path TO agendago, public');
+	client.query('SET search_path TO gendago, public');
 });
 
 async function query(text, params = []) {

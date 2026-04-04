@@ -899,9 +899,6 @@ router.get('/admin/servicos/novo', ensureRoles(adminPermissions.modules.masterAd
 });
 
 router.post('/admin/servicos', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para acessar o cadastro de servicos.'), async (req, res) => {
-	console.log('[DEBUG POST /admin/servicos] req.body:', JSON.stringify(req.body, null, 2));
-	console.log('[DEBUG POST /admin/servicos] req.session.adminUser:', req.session.adminUser ? { role: req.session.adminUser.role, email: req.session.adminUser.email } : 'null');
-	
 	const effectiveCompanyId = req.session.adminUser.role === 'master'
 		? String(req.body.empresa_id || '').trim()
 		: currentAdminCompanyId(req);
@@ -909,8 +906,6 @@ router.post('/admin/servicos', ensureRoles(adminPermissions.modules.masterAdmin,
 		...req.body,
 		empresa_id: effectiveCompanyId,
 	});
-
-	console.log('[DEBUG POST /admin/servicos] serviceForm:', JSON.stringify(serviceForm, null, 2));
 
 	let serviceContext;
 
@@ -924,6 +919,9 @@ router.post('/admin/servicos', ensureRoles(adminPermissions.modules.masterAdmin,
 		};
 	}
 
+	const companiesById = new Map((serviceContext.activeCompanies || []).map((company) => [company.id, company]));
+	const selectedCompanyName = resolveSessionCompanyName(req, companiesById, serviceContext.companyId);
+
 	if (!serviceForm.nome || !serviceForm.preco || !serviceForm.duracao_minutos || !serviceForm.empresa_id || !serviceForm.categoria_id) {
 		return res.status(422).render('backoffice/services/form', {
 			title: 'Novo servico',
@@ -936,6 +934,7 @@ router.post('/admin/servicos', ensureRoles(adminPermissions.modules.masterAdmin,
 			categories: serviceContext.categories,
 			activeCompanies: serviceContext.activeCompanies,
 			selectedCompanyId: serviceContext.companyId,
+			selectedCompanyName,
 			isMaster: req.session.adminUser.role === 'master',
 		});
 	}
@@ -969,6 +968,7 @@ router.post('/admin/servicos', ensureRoles(adminPermissions.modules.masterAdmin,
 			categories: serviceContext.categories,
 			activeCompanies: serviceContext.activeCompanies,
 			selectedCompanyId: serviceContext.companyId,
+			selectedCompanyName,
 			isMaster: req.session.adminUser.role === 'master',
 		});
 	}
@@ -1507,7 +1507,7 @@ router.post('/admin/seed-database', async (req, res) => {
 		const { query } = require('../backend/db/pool');
 		const tableCount = await query(`
 			SELECT COUNT(*) as count FROM information_schema.tables 
-			WHERE table_schema = 'agendago' AND table_type = 'BASE TABLE'
+			WHERE table_schema = 'gendago' AND table_type = 'BASE TABLE'
 		`);
 		
 		// If tables already exist, don't run seed again

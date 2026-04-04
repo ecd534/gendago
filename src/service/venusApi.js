@@ -16,7 +16,7 @@ function normalizeCategoria(row = {}) {
 async function getCategorias() {
 	const result = await query(`
 		SELECT id, nome
-		FROM agendago.categorias
+		FROM gendago.categorias
 		WHERE ativo = true
 		ORDER BY nome ASC
 	`);
@@ -34,7 +34,7 @@ async function getCategoriaById(id) {
 
 	const result = await query(`
 		SELECT id, nome
-		FROM agendago.categorias
+		FROM gendago.categorias
 		WHERE id = $1 AND ativo = true
 		LIMIT 1
 	`, [categoriaId]);
