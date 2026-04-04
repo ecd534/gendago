@@ -13,6 +13,7 @@
 		data-create-company-endpoint="/admin/api/empresas"
 		data-company-detail-endpoint-template="/admin/api/empresas/__COMPANY_ID__"
 		data-company-update-endpoint-template="/admin/api/empresas/__COMPANY_ID__"
+		data-csrf-token="<%= csrfToken %>"
 		data-can-create-company="<%= canCreateCompany ? 'true' : 'false' %>">
 		<div class="row min-vh-100">
 			<%- include('../partials/sidebar', { currentAdmin, page }) %>
@@ -218,6 +219,8 @@
 				return;
 			}
 
+			const csrfToken = String(page.dataset.csrfToken || '').trim();
+
 			const createCompanyForm = document.getElementById('create-company-form');
 			const createFeedback = document.getElementById('create-company-feedback');
 			const manageCompanyForm = document.getElementById('manage-company-form');
@@ -359,6 +362,7 @@
 							method: 'POST',
 							headers: {
 								'Content-Type': 'application/json',
+								'CSRF-Token': csrfToken,
 								Accept: 'application/json',
 							},
 							body: JSON.stringify(payload),
@@ -442,6 +446,7 @@
 							method: 'PATCH',
 							headers: {
 								'Content-Type': 'application/json',
+								'CSRF-Token': csrfToken,
 								Accept: 'application/json',
 							},
 							body: JSON.stringify(payload),

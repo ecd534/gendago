@@ -94,6 +94,12 @@ const csrfProtection = csrf({
 
 // Apply CSRF protection globally for form requests, but skip for setup endpoints
 app.use((req, res, next) => {
+	const isApiRequest = req.path.startsWith('/admin/api/') || req.path.startsWith('/app/api/');
+
+	if (isApiRequest) {
+		return next();
+	}
+
 	// Skip CSRF token generation for one-time setup endpoints
 	if (req.path === '/admin/seed-database') {
 		// Provide a dummy csrfToken function for compatibility
@@ -108,8 +114,8 @@ app.use((req, res, next) => {
 	res.locals.currentAdmin = req.session.adminUser || null;
 	res.locals.flashMessage = req.session.flashMessage || null;
 	delete req.session.flashMessage;
-	// Make CSRF token available in all responses
-	res.locals.csrfToken = req.csrfToken();
+	// Make CSRF token available when CSRF middleware is active for this request
+	res.locals.csrfToken = typeof req.csrfToken === 'function' ? req.csrfToken() : '';
 	next();
 });
 
@@ -145,6 +151,13 @@ app.use(swaggerRoute);
 // Security: Handle CSRF errors gracefully - redirect to login with error message
 app.use((error, req, res, next) => {
 	if (error.code === 'EBADCSRFTOKEN') {
+		const isApiRequest = req.path.startsWith('/admin/api/') || req.path.startsWith('/app/api/');
+		if (isApiRequest) {
+			return res.status(403).json({
+				message: 'Sessao expirada. Recarregue a pagina e tente novamente.',
+			});
+		}
+
 		req.session.flashMessage = {
 			type: 'warning',
 			text: 'Sessão expirada. Por favor, tente novamente.',

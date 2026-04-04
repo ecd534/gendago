@@ -61,6 +61,7 @@ function normalizeService(service = {}) {
 		duracao_minutos: Number(service.duracao_minutos || 0),
 		empresa_id: service.empresa_id || '',
 		categoria_id: service.categoria_id || '',
+		categoria_nome: service.categoria_nome || '',
 		ativo: typeof service.ativo === 'boolean' ? service.ativo : true,
 	};
 }

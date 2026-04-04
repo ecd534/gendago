@@ -31,6 +31,7 @@
 
 				<section class="glass-card p-4 p-xl-5">
 					<form action="<%= formAction %>" method="post" class="row g-4" id="service-form" data-category-endpoint-template="/admin/api/empresas/__EMPRESA_ID__/categorias" data-category-create-endpoint="/admin/api/categorias" data-category-update-endpoint-template="/admin/api/categorias/__CATEGORY_ID__" data-professionals-endpoint="/admin/api/profissionais">
+						<input type="hidden" name="_csrf" value="<%= csrfToken %>">
 						<div class="col-12 col-md-6">
 							<label class="form-label fw-semibold" for="nome">Nome</label>
 							<input class="form-control form-control-lg admin-input" id="nome" name="nome" value="<%= serviceForm.nome %>" required>

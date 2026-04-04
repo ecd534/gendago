@@ -50,7 +50,8 @@ async function listUsers(token) {
 		throw error;
 	}
 
-	const users = await usuariosLocalService.listUsers();
+	const companyScope = viewer.nivel === 'master' ? null : viewer.empresa_id;
+	const users = await usuariosLocalService.listUsers(companyScope);
 	return Array.isArray(users) ? users.map(normalizeUser) : [];
 }
 

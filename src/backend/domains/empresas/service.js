@@ -21,6 +21,10 @@ function normalizeLogo(value) {
 }
 
 function normalizeCompany(company = {}) {
+	const ativo = typeof company.ativo === 'boolean'
+		? company.ativo
+		: normalizeStatus(company.status) !== 'Inativa';
+
 	return {
 		id: company.id,
 		nome: company.nome || '',
@@ -28,7 +32,8 @@ function normalizeCompany(company = {}) {
 		telefone: company.telefone || '',
 		email: company.email || '',
 		endereco: company.endereco || '',
-		status: normalizeStatus(company.status),
+		ativo,
+		status: ativo ? 'Ativa' : 'Inativa',
 		logo_empresa: company.logo_empresa || '',
 	};
 }
@@ -56,7 +61,7 @@ async function createCompany(input) {
 		telefone: String(input.telefone || '').trim(),
 		email: String(input.email || '').trim() || null,
 		endereco: String(input.endereco || '').trim(),
-		status: normalizeStatus(input.status),
+		ativo: typeof input.ativo === 'boolean' ? input.ativo : normalizeStatus(input.status) !== 'Inativa',
 		logo_empresa: normalizeLogo(input.logo_empresa),
 	};
 
@@ -83,7 +88,7 @@ async function updateCompany(companyId, input) {
 		telefone: String(input.telefone || '').trim(),
 		email: String(input.email || '').trim() || null,
 		endereco: String(input.endereco || '').trim(),
-		status: normalizeStatus(input.status),
+		ativo: typeof input.ativo === 'boolean' ? input.ativo : normalizeStatus(input.status) !== 'Inativa',
 		logo_empresa: normalizeLogo(input.logo_empresa),
 	};
 
@@ -111,7 +116,9 @@ async function updateCompanyStatus(companyId, status) {
 		throw error;
 	}
 
-	const updated = await repository.updateCompanyStatus(companyId, normalizeStatus(status));
+	const normalizedStatus = normalizeStatus(status);
+	const ativo = normalizedStatus !== 'Inativa';
+	const updated = await repository.updateCompanyStatus(companyId, ativo);
 	if (!updated) {
 		const error = new Error('Nao foi possivel atualizar o status da empresa');
 		error.statusCode = 500;
@@ -120,7 +127,7 @@ async function updateCompanyStatus(companyId, status) {
 
 	return {
 		status: 'atualizado',
-		novo_status: normalizeStatus(updated.status),
+		novo_status: updated.ativo ? 'Ativa' : 'Inativa',
 	};
 }
 

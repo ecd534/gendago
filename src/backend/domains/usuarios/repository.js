@@ -69,10 +69,18 @@ async function updateUser(userId, fields) {
 	let index = 1;
 
 	for (const [key, value] of Object.entries(fields)) {
-		// Map 'nivel' to 'permissoes' JSON
+		// Keep nivel and permissoes in sync
 		if (key === 'nivel') {
+			sets.push(`nivel = $${index}`);
+			values.push(value);
+			index += 1;
+
 			sets.push(`permissoes = $${index}`);
 			values.push(JSON.stringify({ [value]: true }));
+		} else if (key === 'senha_hash') {
+			// Service layer still uses senha_hash naming; DB column is senha
+			sets.push(`senha = $${index}`);
+			values.push(value);
 		} else {
 			sets.push(`${key} = $${index}`);
 			values.push(value);

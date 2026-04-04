@@ -88,12 +88,14 @@ function canManageCompany(req, companyId) {
 }
 
 function buildServiceForm(data = {}) {
+	const preco = Number(data.preco || 0);
+	const duracao_minutos = Number(data.duracao_minutos || 0);
 	return {
-		nome: data.nome || '',
-		preco: typeof data.preco === 'number' ? data.preco : data.preco || '',
-		duracao_minutos: data.duracao_minutos || '',
-		empresa_id: data.empresa_id || '',
-		categoria_id: data.categoria_id || '',
+		nome: String(data.nome || '').trim(),
+		preco: preco > 0 ? preco : '',
+		duracao_minutos: duracao_minutos > 0 ? duracao_minutos : '',
+		empresa_id: String(data.empresa_id || '').trim(),
+		categoria_id: String(data.categoria_id || '').trim(),
 	};
 }
 
@@ -845,7 +847,7 @@ router.get('/admin/servicos', ensureRoles(adminPermissions.modules.masterAdmin, 
 		const companiesById = new Map(serviceContext.activeCompanies.map((company) => [company.id, company]));
 		const decoratedServices = services.map((service) => ({
 			...service,
-			categoria_nome: categoryMap.get(service.categoria_id) || service.categoria_id,
+			categoria_nome: categoryMap.get(service.categoria_id) || service.categoria_nome || service.categoria_id,
 			empresa_nome: resolveSessionCompanyName(req, companiesById, service.empresa_id),
 		}));
 
@@ -897,6 +899,9 @@ router.get('/admin/servicos/novo', ensureRoles(adminPermissions.modules.masterAd
 });
 
 router.post('/admin/servicos', ensureRoles(adminPermissions.modules.masterAdmin, 'Voce nao tem permissao para acessar o cadastro de servicos.'), async (req, res) => {
+	console.log('[DEBUG POST /admin/servicos] req.body:', JSON.stringify(req.body, null, 2));
+	console.log('[DEBUG POST /admin/servicos] req.session.adminUser:', req.session.adminUser ? { role: req.session.adminUser.role, email: req.session.adminUser.email } : 'null');
+	
 	const effectiveCompanyId = req.session.adminUser.role === 'master'
 		? String(req.body.empresa_id || '').trim()
 		: currentAdminCompanyId(req);
@@ -904,6 +909,8 @@ router.post('/admin/servicos', ensureRoles(adminPermissions.modules.masterAdmin,
 		...req.body,
 		empresa_id: effectiveCompanyId,
 	});
+
+	console.log('[DEBUG POST /admin/servicos] serviceForm:', JSON.stringify(serviceForm, null, 2));
 
 	let serviceContext;
 

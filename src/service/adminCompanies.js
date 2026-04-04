@@ -12,7 +12,8 @@ function normalizeCompany(company) {
 		telefone: company.telefone || '',
 		email: company.email || '',
 		endereco: company.endereco || '',
-		status: normalizeStatus(company.status),
+		status: company.ativo === true ? 'Ativa' : 'Inativa',
+		ativo: company.ativo,
 		logo_empresa: company.logo_empresa || '',
 	};
 }
@@ -24,7 +25,7 @@ function buildPayload(form) {
 		telefone: String(form.telefone || '').trim(),
 		email: String(form.email || '').trim() || null,
 		endereco: String(form.endereco || '').trim(),
-		status: normalizeStatus(form.status),
+		ativo: String(form.status || 'Ativa').trim() !== 'Inativa', // Converter 'Ativa' → true, 'Inativa' → false
 		logo_empresa: String(form.logo_empresa || '').trim(),
 	};
 }
@@ -71,11 +72,12 @@ async function createCompany(token, form) {
 
 async function updateCompanyStatus(token, companyId, status) {
 	const normalizedStatus = normalizeStatus(status);
+	const ativoBoolean = normalizedStatus !== 'Inativa'; // Converter 'Ativa' → true, 'Inativa' → false
 
 	try {
-		await localCompaniesService.updateCompanyStatus(companyId, normalizedStatus);
+		await localCompaniesService.updateCompanyStatus(companyId, ativoBoolean);
 		const updated = await localCompaniesService.getCompanyById(companyId);
-		return normalizeCompany(updated || { id: companyId, status: normalizedStatus });
+		return normalizeCompany(updated || { id: companyId, ativo: ativoBoolean });
 	} catch (error) {
 		const customError = new Error(error.message || extractApiError(error));
 		customError.statusCode = error.statusCode || 500;

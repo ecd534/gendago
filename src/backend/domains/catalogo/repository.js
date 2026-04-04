@@ -55,17 +55,19 @@ async function updateCategory(categoryId, { nome, ativo }) {
 async function listServicesByCompany(companyId, onlyActive = false) {
 	const params = [companyId];
 	let sql = `
-		SELECT id, nome, preco, duracao_minutos, empresa_id, categoria_id, ativo
-		FROM servicos
-		WHERE empresa_id = $1
+		SELECT s.id, s.nome, s.preco, s.duracao_minutos, s.empresa_id, s.categoria_id, s.ativo,
+		       c.nome AS categoria_nome
+		FROM servicos s
+		LEFT JOIN categorias c ON c.id = s.categoria_id
+		WHERE s.empresa_id = $1
 	`;
 
 	if (onlyActive) {
 		params.push(true);
-		sql += ' AND ativo = $2';
+		sql += ' AND s.ativo = $2';
 	}
 
-	sql += ' ORDER BY nome ASC';
+	sql += ' ORDER BY s.nome ASC';
 	const result = await query(sql, params);
 	return result.rows;
 }

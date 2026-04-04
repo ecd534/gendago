@@ -60,8 +60,7 @@
 							<thead>
 								<tr>
 									<th>Servico</th>
-									<th>Categoria</th>
-									<th>Preco</th>
+									<th>Categoria</th>								<th>Status</th>									<th>Preco</th>
 									<th>Duracao</th>
 									<th class="text-end">Acoes</th>
 								</tr>
@@ -69,7 +68,7 @@
 							<tbody>
 								<% if (!services.length) { %>
 									<tr>
-										<td data-label="Servico" colspan="5" class="text-secondary">Nenhum servico encontrado para a empresa selecionada.</td>
+										<td data-label="Servico" colspan="6" class="text-secondary">Nenhum servico encontrado para a empresa selecionada.</td>
 									</tr>
 								<% } %>
 								<% services.forEach((service) => { %>
@@ -79,6 +78,11 @@
 											<div class="small text-secondary"><%= service.id %></div>
 										</td>
 										<td data-label="Categoria"><%= service.categoria_nome %></td>
+										<td data-label="Status">
+											<span class="badge rounded-pill <%= service.ativo === false ? 'badge-status-inactive' : 'badge-status-active' %>">
+												<%= service.ativo === false ? 'Inativo' : 'Ativo' %>
+											</span>
+										</td>
 										<td data-label="Preco">R$ <%= Number(service.preco || 0).toFixed(2).replace('.', ',') %></td>
 										<td data-label="Duracao"><%= service.duracao_minutos %> min</td>
 										<td data-label="Acoes">

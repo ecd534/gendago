@@ -9,6 +9,8 @@ function normalizeService(service) {
 		duracao_minutos: Number(service.duracao_minutos || 0),
 		empresa_id: service.empresa_id || '',
 		categoria_id: service.categoria_id || '',
+		categoria_nome: service.categoria_nome || '',
+		ativo: typeof service.ativo === 'boolean' ? service.ativo : true,
 	};
 }
 
@@ -19,6 +21,7 @@ function buildPayload(form) {
 		duracao_minutos: Number(form.duracao_minutos || 0),
 		empresa_id: String(form.empresa_id || '').trim(),
 		categoria_id: String(form.categoria_id || '').trim(),
+		ativo: form.ativo !== false,
 	};
 }
 
