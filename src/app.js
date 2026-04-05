@@ -100,17 +100,42 @@ app.get('/', (req, res) => {
 	res.redirect('/admin');
 });
 
+if (process.env.NODE_ENV !== 'production') {
+	app.get(['/__debug/error', '/__debug/error/:status'], (req, _res, next) => {
+		const parsedStatus = Number.parseInt(String(req.params.status || '500'), 10);
+		const statusCode = Number.isInteger(parsedStatus) && parsedStatus >= 400 && parsedStatus <= 599
+			? parsedStatus
+			: 500;
+		const error = new Error(`Erro de teste ${statusCode}`);
+		error.statusCode = statusCode;
+		return next(error);
+	});
+}
+
 app.use(adminRoute);
 app.use(categoriaRoute);
 app.use(webappRoute);
 app.use(apiRoute);
 app.use(swaggerRoute);
 
+app.use((req, _res, next) => {
+	const error = new Error('Pagina nao encontrada.');
+	error.statusCode = 404;
+	return next(error);
+});
+
+function isApiRequest(req) {
+	const accept = String(req.get('accept') || '').toLowerCase();
+	return req.path.startsWith('/admin/api/')
+		|| req.path.startsWith('/app/api/')
+		|| req.path.startsWith('/api/')
+		|| accept.includes('application/json');
+}
+
 // Security: Handle CSRF errors gracefully - redirect to login with error message
 app.use((error, req, res, next) => {
 	if (error.code === 'EBADCSRFTOKEN') {
-		const isApiRequest = req.path.startsWith('/admin/api/') || req.path.startsWith('/app/api/');
-		if (isApiRequest) {
+		if (isApiRequest(req)) {
 			return res.status(403).json({
 				message: 'Sessao expirada. Recarregue a pagina e tente novamente.',
 			});
@@ -130,6 +155,7 @@ app.use((error, req, res, _next) => {
 	const isProduction = process.env.NODE_ENV === 'production';
 	const statusCode = error.statusCode || error.status || 500;
 	const message = error.message || 'Erro interno do servidor';
+	const requestExpectsJson = isApiRequest(req);
 
 	// Log full error in development, minimal in production
 	if (isProduction) {
@@ -138,11 +164,32 @@ app.use((error, req, res, _next) => {
 		console.error(error);
 	}
 
-	// Send safe error response
-	res.status(statusCode).json({
-		message,
-		error: isProduction ? undefined : error,
-		timestamp: new Date().toISOString(),
+	if (requestExpectsJson) {
+		return res.status(statusCode).json({
+			message,
+			error: isProduction ? undefined : error,
+			timestamp: new Date().toISOString(),
+		});
+	}
+
+	const safeStatusCode = Number.isInteger(statusCode) && statusCode >= 400 && statusCode <= 599
+		? statusCode
+		: 500;
+	const fallbackMessagesByStatus = {
+		404: 'Pagina nao encontrada.',
+		502: 'Servico indisponivel no momento. Tente novamente em instantes.',
+		504: 'Tempo limite excedido na comunicacao com servico externo. Tente novamente.',
+	};
+	const fallbackMessage = fallbackMessagesByStatus[safeStatusCode]
+		|| (safeStatusCode >= 500
+			? 'Nossa equipe ja esta atuando para normalizar este servico.'
+			: 'Nao foi possivel concluir sua solicitacao agora.');
+
+	return res.status(safeStatusCode).render('webapp/error', {
+		title: `Erro ${safeStatusCode}`,
+		statusCode: safeStatusCode,
+		message: message || fallbackMessage,
+		backUrl: req.get('referer') || req.originalUrl || '/',
 	});
 });
 
