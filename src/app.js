@@ -100,18 +100,6 @@ app.get('/', (req, res) => {
 	res.redirect('/admin');
 });
 
-if (process.env.NODE_ENV !== 'production') {
-	app.get(['/__debug/error', '/__debug/error/:status'], (req, _res, next) => {
-		const parsedStatus = Number.parseInt(String(req.params.status || '500'), 10);
-		const statusCode = Number.isInteger(parsedStatus) && parsedStatus >= 400 && parsedStatus <= 599
-			? parsedStatus
-			: 500;
-		const error = new Error(`Erro de teste ${statusCode}`);
-		error.statusCode = statusCode;
-		return next(error);
-	});
-}
-
 app.use(adminRoute);
 app.use(categoriaRoute);
 app.use(webappRoute);
@@ -194,9 +182,7 @@ app.use((error, req, res, _next) => {
 });
 
 if (require.main === module) {
-	app.listen(port, () => {
-		console.log(`Servidor Node.js ativo na porta ${port}`);
-	});
+	app.listen(port);
 }
 
 module.exports = app;
