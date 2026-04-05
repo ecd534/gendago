@@ -325,5 +325,18 @@ WHERE a.data_hora >= NOW()
 ORDER BY a.data_hora ASC;
 
 -- ============================================================================
+-- 13. SESSION STORE (connect-pg-simple — [Prod] persistência de sessão na Vercel)
+-- ============================================================================
+-- Tabela requerida pelo connect-pg-simple para armazenar sessões HTTP em produção.
+-- Em [Dev] o store padrão em memória é usado; este DDL é inofensivo em ambos os ambientes.
+CREATE TABLE IF NOT EXISTS session (
+  sid    VARCHAR        NOT NULL COLLATE "default",
+  sess   JSON           NOT NULL,
+  expire TIMESTAMPTZ(6) NOT NULL,
+  CONSTRAINT session_pkey PRIMARY KEY (sid) NOT DEFERRABLE INITIALLY IMMEDIATE
+);
+CREATE INDEX IF NOT EXISTS idx_session_expire ON session (expire);
+
+-- ============================================================================
 -- FIM DO SCRIPT
 -- ============================================================================

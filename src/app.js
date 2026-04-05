@@ -1,8 +1,10 @@
 const express = require('express')
 require('dotenv').config();
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
 const helmet = require('helmet');
 const csrf = require('csurf');
+const { pool } = require('./backend/db/pool');
 const adminRoute = require('./route/admin');
 const categoriaRoute = require('./route/categoria');
 const webappRoute = require('./route/webapp');
@@ -63,6 +65,13 @@ app.use(session({
 	secret: sessionSecret || 'dev-session-secret-change-me',
 	resave: false,
 	saveUninitialized: false,
+	// [Prod] store persistente no PostgreSQL (connect-pg-simple)
+	// [Dev]  funciona com o mesmo pool local; em memória seria descartado no restart
+	store: new pgSession({
+		pool,
+		tableName:  'session',
+		schemaName: 'gendago',
+	}),
 	cookie: {
 		httpOnly: true,
 		sameSite: 'strict',
